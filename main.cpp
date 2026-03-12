@@ -2,12 +2,26 @@
 #include <raymath.h>
 #include <cmath>
 #include <string>
+#include <vector>
 
 using namespace std;
 
 // Consts
 const int SCREEN_W = 600;
 const int SCREEN_H = 800;
+
+const int SKULL_DIAMETER = 20; // This is also the height of each row
+
+const enum SkullColor {
+    SKULL_RED,
+    SKULL_GREEN,
+    SKULL_BLUE,
+    SKULL_YELLOW,
+    SKULL_PURPLE,
+    SKULL_ORANGE,
+    SKULL_WHITE,
+    SKULL_BLACK
+};
 
 /**
  * This is what the player will be controlling to shoot skulls
@@ -42,7 +56,7 @@ public:
     void Draw()
     {
         Vector2 target = GetAimTarget();
-        DrawCircle(position.x, position.y, 20, DARKBLUE);  // base of the slingshot (replace with texture later)
+        DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
         DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
     }
 
@@ -59,6 +73,9 @@ public:
 
 class Skull
 {
+public:
+    SkullColor color;
+    Vector2 position;
 };
 
 /**
@@ -76,19 +93,78 @@ class ActiveSkull : public Skull
 };
 
 /**
- * Spawns skulls
+ * Spawns skulls from the top of the screen
+ * Pushes previous rows downwards and spawns new rows on top
+ *
+ * ONLY available on "Inifinite" mode
  */
 class Spawner
 {
+    // TODO
+    // void SpawnRow()
+    // {
+    //     // Spawn a new row of skulls
+    //     for (int i = 0; i < SKULL_DIAMETER; i++)
+    //     {
+    //         // Spawn a new skull
+    //         Skull skull;
+    //         skull.color = static_cast<SkullColor>(i);
+    //         skull.position.x = SCREEN_W / 2;
+    //         skull.position.y = SCREEN_H - (i * SKULL_DIAMETER);
+
+    //         skulls.push_back(skull);
+    //     }
+    // }
+};
+
+/**
+ * Compresses the play area, one row at a time
+ *
+ * Default mode
+ */
+class Ceiling
+{
+    // void GoDown()
+    // {
+    //     // Compress the ceiling
+    //     for (int i = 0; i < SKULL_DIAMETER; i++)
+    //     {
+    //         // Move the row down
+    //         for (int j = 0; j < SKULL_DIAMETER; j++)
+    //         {
+    //             skulls[i * SKULL_DIAMETER + j].position.y -= SKULL_DIAMETER;
+    //         }
+    //     }
+    // }
+
+    void Draw()
+    {
+        // Draw the ceiling
+        for (int i = 0; i < SKULL_DIAMETER; i++)
+        {
+            DrawRectangle(0, SCREEN_H - (i * SKULL_DIAMETER), SCREEN_W, SKULL_DIAMETER, BLACK);
+        }
+    }
+};
+
+class SkullRow
+{
+public:
+    static int rowIndex;
+    vector<Skull> skulls;
 };
 
 int main()
 {
-    InitWindow(SCREEN_W, SCREEN_H, "Strike-A-Pose (but cooler)");
+    InitWindow(SCREEN_W, SCREEN_H, "Bust-a-Move (but cooler)");
 
     SetTargetFPS(60);
 
     Slingshot slingshot;
+    vector<SkullRow> skulls;
+
+    Ceiling ceiling; // Default mode
+    Spawner spawner; // Infinite mode
 
     while (!WindowShouldClose())
     {
