@@ -10,8 +10,8 @@ using namespace std;
 const int SCREEN_W = 600;
 const int SCREEN_H = 800;
 
-const int TILE_SIZE = 24;
-const int SKULL_RADIUS = 12; // This is also half the height of each row, and half the sprite size
+const int TILE_SIZE = 32;
+const int SKULL_RADIUS = 16; // This is also half the height of each row, and half the sprite size
 const int SKULL_DIAMETER = SKULL_RADIUS * 2;  // Row height
 
 const int MAX_SKULLS_PER_ROW = 10;
@@ -108,7 +108,7 @@ public:
         Rectangle sourceRectangle = {0, 0, TILE_SIZE, TILE_SIZE};
 
         // Destination rectangle (where the texture is drawn on)
-        Rectangle skullRectangle = {position.x, position.y, SKULL_DIAMETER * 1.35, SKULL_DIAMETER * 1.35};
+        Rectangle skullRectangle = {position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER};
 
         // Origin of the texture (rotation and scale won't be applied)
         Vector2 origin = {SKULL_RADIUS, SKULL_RADIUS};
@@ -427,7 +427,7 @@ int main()
     skullsManager.Spawn(level);
     skullsManager.LoadRandomSkull(slingshot);
     
-    Texture2D skullTexture = LoadTexture("assets/skull_jelly_24x24.png");
+    Texture2D skullTexture = LoadTexture("assets/skull_jelly_32x32.png");
 
     // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
     RenderTexture2D skullRenderTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
