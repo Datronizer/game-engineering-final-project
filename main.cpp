@@ -10,7 +10,8 @@ using namespace std;
 const int SCREEN_W = 600;
 const int SCREEN_H = 800;
 
-const int SKULL_DIAMETER = 20; // This is also the height of each row
+const int SKULL_RADIUS = 20; // This is also half the height of each row
+const int MAX_SKULLS_PER_ROW = 10;
 
 // This is in case we're gonna use a texture for the skulls
 // For now, we'll just cast this to Raylib colors
@@ -135,7 +136,12 @@ public:
 
     void Draw()
     {
-        DrawCircle(position.x, position.y, SKULL_DIAMETER, SkullColorToRaylib(color));
+        DrawCircle(position.x, position.y, SKULL_RADIUS, SkullColorToRaylib(color));
+    }
+    void Draw(RenderTexture2D skullTexture)
+    {
+        // Performance mode
+        DrawTexture(skullTexture.texture, position.x, position.y, SkullColorToRaylib(color));
     }
 };
 
@@ -190,16 +196,22 @@ public:
          * Spaces in the file are just for readability, so we can ignore them
          */
         char c;
-        int x = 0;
-        int y = 0;
+
+        // Start drawing from the middle top, but shifted by half the number of
+        // max skulls in a row (default: 5)
+        int x = SCREEN_W / 2 - ((SKULL_RADIUS * 2) * (MAX_SKULLS_PER_ROW / 2));
+        int y = SKULL_RADIUS * 3;
+        int row = 0;
+
         while ((c = fgetc(file)) != EOF)
         {
-            // Start drawing from top left corner (0, 0)
 
             // If the character is a newline, go next line
+            // If row is odd, stagger the next row by half the radius (odd rows have 2 less skulls)
             if (c == '\n')
             {
-                y += SKULL_DIAMETER;
+                x = SCREEN_W / 2 - ((SKULL_RADIUS * 2) * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
+                y += SKULL_RADIUS * 2 - 4;  // move down a row (diameter = 2x radius)
                 continue;
             }
 
@@ -212,52 +224,56 @@ public:
             // If the character is air, shift the next skull by the diameter to simulate a gap
             if (c == '0')
             {
-                x += SKULL_DIAMETER;
+                x += SKULL_RADIUS;
             }
 
-            // If the character is a wall, spawn a wall
-            if (c == '1')
-            {
-                // Spawn a new wall
-                Wall wall;
-                wall.position.x = SCREEN_W / 2;
-                wall.position.y = SCREEN_H - (x * SKULL_DIAMETER);
+            // TODO: Fix
+            // // If the character is a wall, spawn a wall
+            // if (c == '1')
+            // {
+            //     // Spawn a new wall
+            //     Wall wall;
+            //     wall.position.x = SCREEN_W / 2;
+            //     wall.position.y = SCREEN_H - (x * SKULL_DIAMETER);
 
-                skulls.push_back(wall);
-            }
+            //     skulls.push_back(wall);
+            // }
 
-            // If the character is a skull, spawn a skull
-            if (c == 'B')
-            {
-                // Spawn a new skull
-                Skull skull;
-                skull.color = ColorCharToSkullColor(c);
-                skull.position.x = SCREEN_W / 2;
-                skull.position.y = SCREEN_H - (y * SKULL_DIAMETER);
+            // If the character is a skull, spawn a skull (which should be literally anything that wasn't
+            // already if-checked earlier)
+            //
+            // Spawn a new skull
+            printf("Spawning color %c at %d, %d\n", c, x, y);
 
-                skulls.push_back(skull);
-            }
+            Skull skull;
+            skull.color = ColorCharToSkullColor(c);
+            skull.position.x = x;
+            skull.position.y = y;
+
+            skulls.push_back(skull);
+
+            x += SKULL_RADIUS * 2;
         }
     }
 
-    void Draw()
+    void Draw(RenderTexture2D skullTexture)
     {
         for (Skull skull : skulls)
         {
-            skull.Draw();
+            skull.Draw(skullTexture);
         }
     }
 
     void SpawnRow()
     {
         // Spawn a new row of skulls
-        for (int i = 0; i < SKULL_DIAMETER; i++)
+        for (int i = 0; i < SKULL_RADIUS; i++)
         {
             // Spawn a new skull
             Skull skull;
             skull.color = static_cast<SkullColor>(i);
             skull.position.x = SCREEN_W / 2;
-            skull.position.y = SCREEN_H - (i * SKULL_DIAMETER);
+            skull.position.y = SCREEN_H - (i * SKULL_RADIUS);
 
             skulls.push_back(skull);
         }
@@ -317,9 +333,9 @@ class Ceiling
     void Draw()
     {
         // Draw the ceiling
-        for (int i = 0; i < SKULL_DIAMETER; i++)
+        for (int i = 0; i < SKULL_RADIUS; i++)
         {
-            DrawRectangle(0, SCREEN_H - (i * SKULL_DIAMETER), SCREEN_W, SKULL_DIAMETER, BLACK);
+            DrawRectangle(0, SCREEN_H - (i * SKULL_RADIUS), SCREEN_W, SKULL_RADIUS, BLACK);
         }
     }
 };
@@ -338,6 +354,14 @@ int main()
 
     skullsManager.Spawn(level);
 
+    // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
+    RenderTexture2D skullTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
+
+    BeginTextureMode(skullTexture);
+    DrawCircle(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, WHITE);
+    DrawCircleLines(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, BLACK);
+    EndTextureMode();
+
     while (!WindowShouldClose())
     {
         // Update
@@ -354,8 +378,9 @@ int main()
         ClearBackground(RAYWHITE);
 
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, BLACK);
+        DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, BLACK);
         slingshot.Draw();
-        skullsManager.Draw();
+        skullsManager.Draw(skullTexture);
 
         // DrawText("Press [SPACE] to shoot!", 190, 200, 20, LIGHTGRAY);
 
