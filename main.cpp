@@ -92,30 +92,62 @@ class ActiveSkull : public Skull
 {
 };
 
-/**
- * Spawns skulls from the top of the screen
- * Pushes previous rows downwards and spawns new rows on top
- *
- * ONLY available on "Inifinite" mode
- */
-class Spawner
+class SkullsManager 
 {
-    // TODO
-    // void SpawnRow()
-    // {
-    //     // Spawn a new row of skulls
-    //     for (int i = 0; i < SKULL_DIAMETER; i++)
-    //     {
-    //         // Spawn a new skull
-    //         Skull skull;
-    //         skull.color = static_cast<SkullColor>(i);
-    //         skull.position.x = SCREEN_W / 2;
-    //         skull.position.y = SCREEN_H - (i * SKULL_DIAMETER);
+    vector<Skull> skulls;
 
-    //         skulls.push_back(skull);
-    //     }
-    // }
+    // Spawns skulls based on a predefined pattern
+    // Patterns are imported from level files
+    void Spawn()
+    {
+
+    }
+
+    void SpawnRow()
+    {
+        // Spawn a new row of skulls
+        for (int i = 0; i < SKULL_DIAMETER; i++)
+        {
+            // Spawn a new skull
+            Skull skull;
+            skull.color = static_cast<SkullColor>(i);
+            skull.position.x = SCREEN_W / 2;
+            skull.position.y = SCREEN_H - (i * SKULL_DIAMETER);
+
+            skulls.push_back(skull);
+        }
+    }
 };
+
+// /**
+//  * Spawns skulls starting from the top of the screen
+//  */
+// class Spawner
+// {
+//     // TODO
+//     // void SpawnRow()
+//     // {
+//     //     // Spawn a new row of skulls
+//     //     for (int i = 0; i < SKULL_DIAMETER; i++)
+//     //     {
+//     //         // Spawn a new skull
+//     //         Skull skull;
+//     //         skull.color = static_cast<SkullColor>(i);
+//     //         skull.position.x = SCREEN_W / 2;
+//     //         skull.position.y = SCREEN_H - (i * SKULL_DIAMETER);
+
+//     //         skulls.push_back(skull);
+//     //     }
+//     // }
+// };
+
+// /**
+//  * ONLY available on "Inifinite" mode
+//  */
+// class InfiniteSpawner : public Spawner
+// {
+
+// };
 
 /**
  * Compresses the play area, one row at a time
@@ -147,13 +179,6 @@ class Ceiling
     }
 };
 
-class SkullRow
-{
-public:
-    static int rowIndex;
-    vector<Skull> skulls;
-};
-
 int main()
 {
     InitWindow(SCREEN_W, SCREEN_H, "Bust-a-Move (but cooler)");
@@ -161,10 +186,9 @@ int main()
     SetTargetFPS(60);
 
     Slingshot slingshot;
-    vector<SkullRow> skulls;
 
+    SkullsManager skullsManager;
     Ceiling ceiling; // Default mode
-    Spawner spawner; // Infinite mode
 
     while (!WindowShouldClose())
     {
