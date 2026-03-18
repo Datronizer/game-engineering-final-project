@@ -4,92 +4,15 @@
 #include <string>
 #include <vector>
 
+#include "objects/skull.h"
+
 using namespace std;
 
 // Consts
 const int SCREEN_W = 600;
 const int SCREEN_H = 800;
 
-const int TILE_SIZE = 32;
-const int SKULL_RADIUS = 16; // This is also half the height of each row, and half the sprite size
-const int SKULL_DIAMETER = SKULL_RADIUS * 2;  // Row height
-
 const int MAX_SKULLS_PER_ROW = 10;
-
-// This is in case we're gonna use a texture for the skulls
-// For now, we'll just cast this to Raylib colors
-enum SkullColor
-{
-    SKULL_RED,
-    SKULL_GREEN,
-    SKULL_BLUE,
-    SKULL_YELLOW,
-    SKULL_PURPLE,
-    SKULL_ORANGE,
-    SKULL_WHITE,
-    SKULL_BLACK,
-
-    SKULL_MAGENTA,
-    SKULL_WALL,  // lmao funny name
-};
-
-Color SkullColorToRaylib(SkullColor color)
-{
-    switch (color)
-    {
-    case SKULL_RED:
-        return RED;
-    case SKULL_GREEN:
-        return GREEN;
-    case SKULL_BLUE:
-        return BLUE;
-    case SKULL_YELLOW:
-        return YELLOW;
-    case SKULL_PURPLE:
-        return PURPLE;
-    case SKULL_ORANGE:
-        return ORANGE;
-    case SKULL_WHITE:
-        return WHITE;
-    case SKULL_BLACK:
-        return BLACK;
-    default:
-        return MAGENTA;
-    }
-}
-
-// Converts a char from the level file to a Color
-SkullColor ColorCharToSkullColor(char c)
-{
-    switch (c)
-    {
-    case 'R':
-        return SKULL_RED;
-    case 'G':
-        return SKULL_GREEN;
-    case 'B':
-        return SKULL_BLUE;
-    case 'Y':
-        return SKULL_YELLOW;
-    case 'P':
-        return SKULL_PURPLE;
-    case 'O':
-        return SKULL_ORANGE;
-    case 'W':
-        return SKULL_WHITE;
-    case 'K':
-        return SKULL_BLACK;
-    default:
-        return SKULL_MAGENTA; // just so we know something went wrong
-    }
-}
-
-// Forward declarations (or Slingshot will complain that Skull isn't declared yet)
-class Skull;
-class SkullsManager;
-class Slingshot;
-
-
 
 
 /**
@@ -100,7 +23,6 @@ class Slingshot;
  */
 class Wall : public Skull
 {
-
 };
 
 /**
@@ -115,21 +37,23 @@ class StaticSkull : public Skull
  */
 class ActiveSkull : public Skull
 {
-    public:
+public:
     /**
      * Pops neighboring skulls of the same color and chain the pop to the next skull
      */
     void Pop()
     {
-
     }
 };
+
+class Slingshot; // forward declaration for LoadRandomSkull
 
 class SkullsManager
 {
 public:
     // I'm gonna assume the width of the rows is like 10 skulls max
-    vector<Skull> skulls;
+    // For the neighbor logic to work, we'll use a vector of rows (10 skulls max per row for however many rows)
+    vector<vector<Skull>> skulls = vector<vector<Skull>>(MAX_SKULLS_PER_ROW);
 
     // Spawns skulls based on a predefined pattern
     // Patterns are imported from level files
@@ -151,18 +75,16 @@ public:
          */
         char c;
 
-        
         // Top row is always the ceiling
-        for (int i = 0; i < SKULL_RADIUS; i++)
-        {
-            Skull skull;
-            skull.color = SKULL_WALL;
-            skull.position.x = SKULL_DIAMETER;  // Unlike other skulls, this always start from top left
-            skull.position.y = SKULL_DIAMETER;
+        // for (int i = 0; i < SKULL_RADIUS; i++)
+        // {
+        //     Skull skull;
+        //     skull.color = SKULL_WALL;
+        //     skull.position.x = SKULL_DIAMETER;  // Unlike other skulls, this always start from top left
+        //     skull.position.y = SKULL_DIAMETER;
 
-            skulls.push_back(skull);
-        }
-
+        //     skulls.push_back(skull);
+        // }
 
         // Start drawing from the middle top, but shifted by half the number of
         // max skulls in a row (default: 5)
@@ -230,45 +152,58 @@ public:
             skull.position.x = x;
             skull.position.y = y;
 
-            skulls.push_back(skull);
+            skulls[row].push_back(skull);
 
             x += SKULL_DIAMETER;
         }
     }
 
+    SkullColor GetRandomSkullColor()
+    {
+        // Pick random color from the enum of colors, minus the wall and magenta
+        SkullColor validColors[] = {SKULL_RED, SKULL_GREEN, SKULL_BLUE, SKULL_YELLOW, SKULL_PURPLE, SKULL_ORANGE, SKULL_WHITE, SKULL_BLACK};
+
+        // TODO: Number of colors to choose should scale based on levels
+        return validColors[rand() % 8];
+    }
     void LoadRandomSkull(Slingshot &slingshot); // defined after Slingshot
 
     void Draw(Texture2D skullTexture)
     {
-        for (Skull skull : skulls)
+        for (vector<Skull> row : skulls)
         {
-            skull.Draw(skullTexture);
+            for (Skull skull : row)
+            {
+                skull.Draw(skullTexture);
+            }
         }
     }
     void Draw(RenderTexture2D skullTexture)
     {
-        for (Skull skull : skulls)
+        for (vector<Skull> row : skulls)
         {
-            skull.Draw(skullTexture);
+            for (Skull skull : row)
+            {
+                skull.Draw(skullTexture);
+            }
         }
     }
 
-    void SpawnRow()
-    {
-        // Spawn a new row of skulls
-        for (int i = 0; i < SKULL_RADIUS; i++)
-        {
-            // Spawn a new skull
-            Skull skull;
-            skull.color = static_cast<SkullColor>(i);
-            skull.position.x = SCREEN_W / 2;
-            skull.position.y = SCREEN_H - (i * SKULL_RADIUS);
+    // void SpawnRow()
+    // {
+    //     // Spawn a new row of skulls
+    //     for (int i = 0; i < SKULL_RADIUS; i++)
+    //     {
+    //         // Spawn a new skull
+    //         Skull skull;
+    //         skull.color = static_cast<SkullColor>(i);
+    //         skull.position.x = SCREEN_W / 2;
+    //         skull.position.y = SCREEN_H - (i * SKULL_RADIUS);
 
-            skulls.push_back(skull);
-        }
-    }
+    //         skulls.push_back(skull);
+    //     }
+    // }
 };
-
 
 /**
  * This is what the player will be controlling to shoot skulls
@@ -282,11 +217,13 @@ public:
     const float AIM_SPEED = 0.03f;
     const float MIN_ANGLE = -PI + (CLAMP_ANGLE * PI / 180); // -PI + 10deg
     const float MAX_ANGLE = -(CLAMP_ANGLE * PI / 180);      // -10deg
+    const float SKULL_SPEED = 600.0f;
 
     Vector2 target = {0, 0};
 
-    SkullsManager *skullsManager;
-    Skull activeSkull;
+    Skull *activeSkull = nullptr;
+    Skull *flyingSkull = nullptr;
+    Vector2 flyingVelocity = {0, 0};
 
     void Update()
     {
@@ -303,38 +240,64 @@ public:
             if (aimAngle > MAX_ANGLE)
                 aimAngle = MAX_ANGLE;
         }
+
+        // Keep target up to date so Shoot() always has the correct value
+        target = GetAimTarget();
+
+        // Move the flying skull
+        if (flyingSkull != nullptr)
+        {
+            float dt = GetFrameTime();
+            flyingSkull->position.x += flyingVelocity.x * dt;
+            flyingSkull->position.y += flyingVelocity.y * dt;
+
+            // Despawn when off screen
+            if (flyingSkull->position.y < 0 ||
+                flyingSkull->position.x < 0 ||
+                flyingSkull->position.x > SCREEN_W)
+            {
+                delete flyingSkull;
+                flyingSkull = nullptr;
+            }
+        }
     }
 
     void Draw()
     {
-        target = GetAimTarget();
-        DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
+        // DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
         DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
 
-        DrawText(("Loaded: " + activeSkull.ToString()).c_str(), 10, 150, 20, BLACK);
+        DrawText(("Loaded: " + activeSkull->ToString()).c_str(), 10, 150, 20, BLACK);
     }
 
     // --- Game Logic ---
     // Returns the endpoint of the aim line
     Vector2 GetAimTarget()
     {
-        Vector2 target = position;
-        target.x += cos(aimAngle) * SCREEN_W / 2;
-        target.y += sin(aimAngle) * SCREEN_W / 2;
-        target.x = Clamp(target.x, 0, SCREEN_W);
-        return target;
+        Vector2 t = position;
+        t.x += cos(aimAngle) * SCREEN_W / 2;
+        t.y += sin(aimAngle) * SCREEN_W / 2;
+        t.x = Clamp(t.x, 0, SCREEN_W);
+        return t;
     }
 
-    // TODO: Why won't you work
     void Shoot(SkullsManager &skullsManager)
     {
-        DrawText("pew pew", position.x, position.y - 100, 20, BLACK);
+        if (flyingSkull != nullptr) return; // already a skull in flight
 
-        // Shoot the skull (Send it flying based on the slingshot's aim angle)
-        activeSkull.position = target;
-        // activeSkull->position.y += sin(aimAngle) * SCREEN_W / 2;
+        // Compute direction from slingshot toward aim target
+        Vector2 dir = Vector2Subtract(target, position);
+        float len = Vector2Length(dir);
+        if (len > 0)
+            dir = Vector2Scale(dir, 1.0f / len);
 
-        // Skull gone, load a new one
+        // Launch the active skull
+        flyingSkull = activeSkull;
+        flyingSkull->position = position;
+        flyingVelocity = Vector2Scale(dir, SKULL_SPEED);
+        activeSkull = nullptr;
+
+        // Load the next skull into the slingshot
         skullsManager.LoadRandomSkull(*this);
     }
 };
@@ -342,9 +305,13 @@ public:
 // fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
-    Skull skull;
-    skull.color = static_cast<SkullColor>(skulls[rand() % skulls.size()].color);
-    skull.position = slingshot.position;
+    Skull* skull = new Skull();
+
+    // Pick random color from the enum of colors, minus the wall and magenta
+    SkullColor validColors[] = {SKULL_RED, SKULL_GREEN, SKULL_BLUE, SKULL_YELLOW, SKULL_PURPLE, SKULL_ORANGE, SKULL_WHITE, SKULL_BLACK};
+
+    skull->color = validColors[rand() % 8];
+    skull->position = slingshot.position;
     slingshot.activeSkull = skull;
 }
 
@@ -392,18 +359,17 @@ int main()
 
     skullsManager.Spawn(level);
     skullsManager.LoadRandomSkull(slingshot);
-    
+
     // Actual texture
     Texture2D skullTexture = LoadTexture("assets/skull_jelly_32x32.png");
 
     // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
     RenderTexture2D skullRenderTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
+
     BeginTextureMode(skullRenderTexture);
     DrawCircle(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, WHITE);
     DrawCircleLines(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, BLACK);
     EndTextureMode();
-
-    
 
     while (!WindowShouldClose())
     {
@@ -412,7 +378,6 @@ int main()
 
         if (IsKeyPressed(KEY_SPACE))
         {
-            // Shoot skull
             slingshot.Shoot(skullsManager);
         }
 
@@ -428,10 +393,18 @@ int main()
         if (skullTexture.id != 0)
         {
             skullsManager.Draw(skullTexture);
+            if (slingshot.activeSkull != nullptr)
+                slingshot.activeSkull->Draw(skullTexture);
+            if (slingshot.flyingSkull != nullptr)
+                slingshot.flyingSkull->Draw(skullTexture);
         }
         else
         {
             skullsManager.Draw(skullRenderTexture);
+            if (slingshot.activeSkull != nullptr)
+                slingshot.activeSkull->Draw(skullRenderTexture);
+            if (slingshot.flyingSkull != nullptr)
+                slingshot.flyingSkull->Draw(skullRenderTexture);
         }
 
         // DrawText("Press [SPACE] to shoot!", 190, 200, 20, LIGHTGRAY);
