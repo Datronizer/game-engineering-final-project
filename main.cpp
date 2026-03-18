@@ -150,6 +150,8 @@ class StaticSkull : public Skull
 class ActiveSkull : public Skull
 {
     public:
+      Vector2 velocity = {0, 0};
+      bool isFlying = false;
     /**
      * Pops neighboring skulls of the same color and chain the pop to the next skull
      */
@@ -170,7 +172,7 @@ public:
     void Spawn(int level)
     {
         // Read the level file
-        FILE *file = fopen("levels/level-01", "r");
+        FILE *file = fopen("src/levels/level-01", "r");
         if (file == NULL)
         {
             printf("Error opening file\n");
@@ -320,11 +322,37 @@ public:
     Vector2 target = {0, 0};
 
     SkullsManager *skullsManager;
-    Skull activeSkull;
+    ActiveSkull activeSkull;
 
     void Update()
     {
-        // Aim and clamp aim angle to 10 degrees from horizon
+        //move the skull every frame if it is flying
+          if (activeSkull.isFlying)
+    {
+        float dt = GetFrameTime(); //delta time for framerate independent movement
+
+        activeSkull.position.x += activeSkull.velocity.x * dt;
+        activeSkull.position.y += activeSkull.velocity.y * dt;
+
+        //adds collision so they can bounce off walls
+        if (activeSkull.position.x <= SKULL_RADIUS ||
+        activeSkull.position.x >= SCREEN_W - SKULL_RADIUS)
+    {
+        activeSkull.velocity.x *= -1; //reverse direction
+    }
+    }
+    //reload when the skull moves
+    if (activeSkull.position.y < 0 ||
+        activeSkull.position.x < 0 ||
+        activeSkull.position.x > SCREEN_W)
+    {
+        activeSkull.isFlying = false;
+
+        if (skullsManager)
+            skullsManager->LoadRandomSkull(*this); //loads the next skull
+    }
+
+        //Aim and clamp aim angle to 10 degrees from horizon
         if (IsKeyDown(KEY_LEFT))
         {
             aimAngle -= AIM_SPEED;
@@ -339,8 +367,10 @@ public:
         }
     }
 
-    void Draw()
+    void Draw(Texture2D skullTexture)
     {
+        activeSkull.Draw(skullTexture);
+
         target = GetAimTarget();
         DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
         DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
@@ -359,27 +389,38 @@ public:
         return target;
     }
 
-    // TODO: Why won't you work
-    void Shoot(SkullsManager &skullsManager)
-    {
-        DrawText("pew pew", position.x, position.y - 100, 20, BLACK);
+// TODO: Why won't you work
+void Shoot(SkullsManager &skullsManager)
+{
+    if (activeSkull.isFlying) return;
 
-        // Shoot the skull (Send it flying based on the slingshot's aim angle)
-        activeSkull.position = target;
-        // activeSkull->position.y += sin(aimAngle) * SCREEN_W / 2;
+    activeSkull.isFlying = true;
 
-        // Skull gone, load a new one
-        skullsManager.LoadRandomSkull(*this);
-    }
+    //DrawText("pew pew", position.x, position.y - 100, 20, BLACK);
+
+    //allow the skull to store motion
+    float speed = 400;
+    activeSkull.velocity.x = cos(aimAngle) * speed;
+    activeSkull.velocity.y = sin(aimAngle) * speed;
+
+    //Shoot the skull (Send it flying based on the slingshot's aim angle)
+    activeSkull.position = position;
+    // activeSkull->position.y += sin(aimAngle) * SCREEN_W / 2;
+
+    //removed instant reload or the shot appears immediately lol
+     //skullsManager.LoadRandomSkull(*this);
+}
 };
-
 // fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
     Skull skull;
     skull.color = static_cast<SkullColor>(skulls[rand() % skulls.size()].color);
-    skull.position = slingshot.position;
-    slingshot.activeSkull = skull;
+  //  skull.position = slingshot.position;
+    
+    slingshot.activeSkull.position = slingshot.position; //ensures the loaded skull appears in the slingshot
+    slingshot.activeSkull.velocity = {0,0}; //so next skull doesnt keep old velocity
+    slingshot.activeSkull.isFlying = false;
 }
 
 /**
@@ -419,15 +460,17 @@ int main()
     SetTargetFPS(60);
 
     int level = 1;
+
     Slingshot slingshot;
 
     SkullsManager skullsManager;
     Ceiling ceiling; // Default mode
+    slingshot.skullsManager = &skullsManager;
 
     skullsManager.Spawn(level);
     skullsManager.LoadRandomSkull(slingshot);
     
-    Texture2D skullTexture = LoadTexture("assets/skull_jelly_32x32.png");
+    Texture2D skullTexture = LoadTexture("src/assets/skull_jelly_32x32.png");
 
     // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
     RenderTexture2D skullRenderTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
@@ -456,7 +499,7 @@ int main()
 
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, BLACK);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, BLACK);
-        slingshot.Draw();
+        slingshot.Draw(skullTexture);
 
         if (skullTexture.id != 0)
         {
