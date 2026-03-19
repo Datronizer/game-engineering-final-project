@@ -3,6 +3,8 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <cfloat> 
+#include <algorithm>
 
 using namespace std;
 
@@ -167,6 +169,74 @@ public:
     // I'm gonna assume the width of the rows is like 10 skulls max
     vector<Skull> skulls;
 
+    //storing collided skulls index
+    int collidedIndex = -1; 
+    
+    //score count!!
+    int score = 0;
+
+    //get the connected group, finding all skulls of the same color that are touching each other in a chain
+  vector<int> GetConnectedGroup(int startIndex)
+{
+    //List of skull indices that are connected to the starting skull
+    vector<int> group;
+
+    //Track which skulls we've already processed to avoid infinite loops yucky
+    vector<bool> visited(skulls.size(), false);
+
+    //To-do list of skulls to check next, starting with the newly placed skull
+    vector<int> stack = {startIndex};
+
+    //Only spread to skulls that match this colour
+    SkullColor targetColor = skulls[startIndex].color;
+
+     //Keep checking until there are no more skulls to process
+    while (!stack.empty())
+    {
+        int i = stack.back();
+        stack.pop_back();
+
+        //If already processed, skip!
+        if (visited[i]) continue;
+
+        //Mark as processed and add to the connected group
+        visited[i] = true;
+        group.push_back(i);
+
+        for (int j = 0; j < (int)skulls.size(); j++)
+        {
+            if (visited[j]) continue;
+            //Skip skulls that don't match our target color
+            if (skulls[j].color != targetColor) continue;
+
+            //Check if this skull is close enough to be a neighbour
+            //KULL_DIAMETER + 6 covers both direct (32px) and staggered diagonal (~35.8px) neighbours
+            float dist = Vector2Distance(skulls[i].position, skulls[j].position);
+
+            if (dist < SKULL_DIAMETER + 6)
+                stack.push_back(j);
+        }
+    }
+    return group;
+}
+
+    //See if there is 4 connected and then erase them!
+    void CheckPop(int newSkullIndex)
+    {
+        vector<int> group = GetConnectedGroup(newSkullIndex);
+
+        if (group.size() >= 3)
+        {
+            //Sort descending so erasing by index doesn't shift earlier indices
+            sort(group.rbegin(), group.rend());
+            for (int i : group)
+                skulls.erase(skulls.begin() + i);
+
+            score += group.size(); //1 point per skull popped
+            
+        }
+    }
+
     // Spawns skulls based on a predefined pattern
     // Patterns are imported from level files
     void Spawn(int level)
@@ -187,14 +257,13 @@ public:
          */
         char c;
 
-        
         // Top row is always the ceiling
         for (int i = 0; i < SKULL_RADIUS; i++)
         {
             Skull skull;
-            skull.color = SKULL_WALL;
-            skull.position.x = SKULL_DIAMETER;  // Unlike other skulls, this always start from top left
-            skull.position.y = SKULL_DIAMETER;
+           skull.color = SKULL_WALL;
+           skull.position.x = SKULL_DIAMETER;  // Unlike other skulls, this always start from top left
+           skull.position.y = SKULL_DIAMETER;
 
             skulls.push_back(skull);
         }
@@ -272,6 +341,93 @@ public:
         }
     }
 
+    //for collision with the skulls
+    bool CheckCollision(ActiveSkull &activeSkull)
+    {
+
+         if (activeSkull.position.y <= SKULL_RADIUS * 3)
+        {
+        collidedIndex = -2; //special value meaning "hit ceiling"
+        return true;
+        }
+
+        for (int i = 0; i < (int)skulls.size(); i++)
+        {
+            float dist = Vector2Distance(activeSkull.position, skulls[i].position);
+            if (dist < SKULL_DIAMETER + 2)
+            {
+                collidedIndex = i; //store index
+                return true;
+            }
+        }
+        collidedIndex = -1;
+        return false;
+    }
+
+//Where to place the skull when it hits another one
+void SnapSkull(ActiveSkull &activeSkull)
+{
+    if (collidedIndex < 0) return;
+
+     //Hit ceiling, snap to nearest x grid position at top row
+     if (collidedIndex == -2)
+    {
+        Skull newSkull;
+        newSkull.color = activeSkull.color;
+        newSkull.position.x = round(activeSkull.position.x / SKULL_DIAMETER) * SKULL_DIAMETER;
+        newSkull.position.y = SKULL_RADIUS * 3;
+        skulls.push_back(newSkull);
+        CheckPop(skulls.size() - 1);
+        return;
+    }
+
+    //which direction did it come from
+    float dx = activeSkull.position.x - skulls[collidedIndex].position.x;
+    float dy = activeSkull.position.y - skulls[collidedIndex].position.y;
+
+    //define all possible snap slots
+    Vector2 offsets[] = {
+        {0, -(float)SKULL_DIAMETER},
+        {0,  (float)SKULL_DIAMETER},
+        {-(float)SKULL_DIAMETER, 0},
+        { (float)SKULL_DIAMETER, 0},
+        {-(float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
+        { (float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
+        {-(float)SKULL_RADIUS,  (float)SKULL_DIAMETER},
+        { (float)SKULL_RADIUS,  (float)SKULL_DIAMETER},
+    };
+
+    //pick the best slot using dot product 
+    Vector2 bestOffset = offsets[0];
+    float bestDot = -FLT_MAX;
+
+    for (Vector2 offset : offsets)
+    {
+        float dot = dx * offset.x + dy * offset.y;
+        if (dot > bestDot)
+        {
+            bestDot = dot;
+            bestOffset = offset;
+        }
+    }
+
+    Skull newSkull;
+    newSkull.color = activeSkull.color;
+    newSkull.position.x = skulls[collidedIndex].position.x + bestOffset.x;
+    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y;
+
+    for (Skull &skull : skulls)
+    {
+        //check the slot isn't already occupied
+        if (Vector2Distance(skull.position, newSkull.position) < SKULL_DIAMETER - 2)
+            return;
+    }
+
+    //place the skull and check for a pop (3 in a row lol)
+    skulls.push_back(newSkull);
+    CheckPop(skulls.size() - 1);
+}
+
     void LoadRandomSkull(Slingshot &slingshot); // defined after Slingshot
 
     void Draw(Texture2D skullTexture)
@@ -318,65 +474,89 @@ public:
     const float AIM_SPEED = 0.03f;
     const float MIN_ANGLE = -PI + (CLAMP_ANGLE * PI / 180); // -PI + 10deg
     const float MAX_ANGLE = -(CLAMP_ANGLE * PI / 180);      // -10deg
+    SkullColor nextSkullColor = SKULL_RED;
 
     Vector2 target = {0, 0};
 
     SkullsManager *skullsManager;
     ActiveSkull activeSkull;
+ 
 
     void Update()
+{
+    if (activeSkull.isFlying)
     {
-        //move the skull every frame if it is flying
-          if (activeSkull.isFlying)
-    {
-        float dt = GetFrameTime(); //delta time for framerate independent movement
+        float dt = GetFrameTime();
 
         activeSkull.position.x += activeSkull.velocity.x * dt;
         activeSkull.position.y += activeSkull.velocity.y * dt;
 
-        //adds collision so they can bounce off walls
-        if (activeSkull.position.x <= SKULL_RADIUS ||
-        activeSkull.position.x >= SCREEN_W - SKULL_RADIUS)
-    {
-        activeSkull.velocity.x *= -1; //reverse direction
-    }
-    }
-    //reload when the skull moves
-    if (activeSkull.position.y < 0 ||
-        activeSkull.position.x < 0 ||
-        activeSkull.position.x > SCREEN_W)
-    {
-        activeSkull.isFlying = false;
-
-        if (skullsManager)
-            skullsManager->LoadRandomSkull(*this); //loads the next skull
-    }
-
-        //Aim and clamp aim angle to 10 degrees from horizon
-        if (IsKeyDown(KEY_LEFT))
+        //Bounce off side walls
+        if (activeSkull.position.x <= SKULL_RADIUS) //hit left wall
         {
-            aimAngle -= AIM_SPEED;
-            if (aimAngle < MIN_ANGLE)
-                aimAngle = MIN_ANGLE;
+            activeSkull.velocity.x *= -1.1f; //goes a little faster when it hits a wall
         }
-        else if (IsKeyDown(KEY_RIGHT))
+        else if (activeSkull.position.x >= SCREEN_W - SKULL_RADIUS) //hit right wall
         {
-            aimAngle += AIM_SPEED;
-            if (aimAngle > MAX_ANGLE)
-                aimAngle = MAX_ANGLE;
+               activeSkull.velocity.x *= -1.1f; //goes a little faster when it hits a wall
+        }
+
+        //Stick to grid skulls on contact
+        if (skullsManager && skullsManager->CheckCollision(activeSkull))
+        {
+            activeSkull.isFlying = false;
+            skullsManager->SnapSkull(activeSkull);
+            skullsManager->LoadRandomSkull(*this);
+        }
+
+        //Flew off screen
+        if (activeSkull.position.y < 0 ||
+            activeSkull.position.x < 0 ||
+            activeSkull.position.x > SCREEN_W)
+        {
+            activeSkull.isFlying = false;
+            if (skullsManager)
+                skullsManager->LoadRandomSkull(*this);
         }
     }
+    
 
-    void Draw(Texture2D skullTexture)
+    // Aim and clamp angle to 10 degrees from horizon
+    if (IsKeyDown(KEY_LEFT))
     {
-        activeSkull.Draw(skullTexture);
-
-        target = GetAimTarget();
-        DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
-        DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
-
-        DrawText(("Loaded: " + activeSkull.ToString()).c_str(), 10, 150, 20, BLACK);
+        aimAngle -= AIM_SPEED;
+        if (aimAngle < MIN_ANGLE)
+            aimAngle = MIN_ANGLE;
     }
+    else if (IsKeyDown(KEY_RIGHT))
+    {
+        aimAngle += AIM_SPEED;
+        if (aimAngle > MAX_ANGLE)
+            aimAngle = MAX_ANGLE;
+    }
+}
+
+  void Draw(Texture2D skullTexture)
+{
+    target = GetAimTarget();
+    
+    //Draw slingshot base and aim line 
+    DrawCircle(position.x, position.y, 20, DARKBLUE);
+    DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
+
+    //Draw active skull on top of the slingshot circle
+    if (!activeSkull.isFlying)
+        activeSkull.position = position;
+    activeSkull.Draw(skullTexture);
+
+    //Draw next skull preview to the left
+    Skull nextPreview;
+    nextPreview.color = nextSkullColor;
+    nextPreview.position = {position.x - 60, position.y};
+    nextPreview.Draw(skullTexture);
+    DrawText("Next:", (int)position.x - 90, (int)position.y - 20, 16, DARKGRAY);
+}
+
 
     // --- Game Logic ---
     // Returns the endpoint of the aim line
@@ -396,8 +576,6 @@ void Shoot(SkullsManager &skullsManager)
 
     activeSkull.isFlying = true;
 
-    //DrawText("pew pew", position.x, position.y - 100, 20, BLACK);
-
     //allow the skull to store motion
     float speed = 400;
     activeSkull.velocity.x = cos(aimAngle) * speed;
@@ -405,22 +583,21 @@ void Shoot(SkullsManager &skullsManager)
 
     //Shoot the skull (Send it flying based on the slingshot's aim angle)
     activeSkull.position = position;
-    // activeSkull->position.y += sin(aimAngle) * SCREEN_W / 2;
-
-    //removed instant reload or the shot appears immediately lol
-     //skullsManager.LoadRandomSkull(*this);
 }
 };
+
 // fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
-    Skull skull;
-    skull.color = static_cast<SkullColor>(skulls[rand() % skulls.size()].color);
-  //  skull.position = slingshot.position;
-    
-    slingshot.activeSkull.position = slingshot.position; //ensures the loaded skull appears in the slingshot
-    slingshot.activeSkull.velocity = {0,0}; //so next skull doesnt keep old velocity
+    if (skulls.empty()) return; //safety check
+
+    slingshot.activeSkull.color = slingshot.nextSkullColor;
+    slingshot.activeSkull.position = slingshot.position;
+    slingshot.activeSkull.velocity = {0, 0};
     slingshot.activeSkull.isFlying = false;
+
+    //Pick next preview from any skull in the grid
+    slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
 }
 
 /**
@@ -468,7 +645,9 @@ int main()
     slingshot.skullsManager = &skullsManager;
 
     skullsManager.Spawn(level);
-    skullsManager.LoadRandomSkull(slingshot);
+    skullsManager.LoadRandomSkull(slingshot); //seeds nextSkullColor
+    skullsManager.LoadRandomSkull(slingshot); //activeSkull gets the real first color
+
     
     Texture2D skullTexture = LoadTexture("src/assets/skull_jelly_32x32.png");
 
@@ -499,6 +678,7 @@ int main()
 
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, BLACK);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, BLACK);
+        DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, BLACK);
         slingshot.Draw(skullTexture);
 
         if (skullTexture.id != 0)
