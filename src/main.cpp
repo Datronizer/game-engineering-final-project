@@ -14,7 +14,6 @@ const int SCREEN_H = 800;
 
 const int MAX_SKULLS_PER_ROW = 10;
 
-
 /**
  * A wall is a special skull that is not affected by the slingshot
  * It is indestructible
@@ -38,6 +37,8 @@ class StaticSkull : public Skull
 class ActiveSkull : public Skull
 {
 public:
+    Vector2 velocity = {0, 0};
+    bool isFlying = false;
     /**
      * Pops neighboring skulls of the same color and chain the pop to the next skull
      */
@@ -53,7 +54,7 @@ class SkullsManager
 public:
     // I'm gonna assume the width of the rows is like 10 skulls max
     // For the neighbor logic to work, we'll use a vector of rows (10 skulls max per row for however many rows)
-    vector<vector<Skull>> skulls = vector<vector<Skull>>(MAX_SKULLS_PER_ROW);
+    vector<Skull> skulls = vector<Skull>(MAX_SKULLS_PER_ROW);
 
     // Spawns skulls based on a predefined pattern
     // Patterns are imported from level files
@@ -152,7 +153,7 @@ public:
             skull.position.x = x;
             skull.position.y = y;
 
-            skulls[row].push_back(skull);
+            skulls.push_back(skull);
 
             x += SKULL_DIAMETER;
         }
@@ -170,22 +171,16 @@ public:
 
     void Draw(Texture2D skullTexture)
     {
-        for (vector<Skull> row : skulls)
+        for (Skull skull : skulls)
         {
-            for (Skull skull : row)
-            {
-                skull.Draw(skullTexture);
-            }
+            skull.Draw(skullTexture);
         }
     }
     void Draw(RenderTexture2D skullTexture)
     {
-        for (vector<Skull> row : skulls)
+        for (Skull skull : skulls)
         {
-            for (Skull skull : row)
-            {
-                skull.Draw(skullTexture);
-            }
+            skull.Draw(skullTexture);
         }
     }
 
@@ -221,12 +216,37 @@ public:
 
     Vector2 target = {0, 0};
 
-    Skull *activeSkull = nullptr;
-    Skull *flyingSkull = nullptr;
-    Vector2 flyingVelocity = {0, 0};
+    SkullsManager *skullsManager;
+    ActiveSkull activeSkull;
 
     void Update()
     {
+        // move the skull every frame if it is flying
+        if (activeSkull.isFlying)
+        {
+            float dt = GetFrameTime(); // delta time for framerate independent movement
+
+            activeSkull.position.x += activeSkull.velocity.x * dt;
+            activeSkull.position.y += activeSkull.velocity.y * dt;
+
+            // adds collision so they can bounce off walls
+            if (activeSkull.position.x <= SKULL_RADIUS ||
+                activeSkull.position.x >= SCREEN_W - SKULL_RADIUS)
+            {
+                activeSkull.velocity.x *= -1; // reverse direction
+            }
+        }
+        // reload when the skull moves
+        if (activeSkull.position.y < 0 ||
+            activeSkull.position.x < 0 ||
+            activeSkull.position.x > SCREEN_W)
+        {
+            activeSkull.isFlying = false;
+
+            if (skullsManager)
+                skullsManager->LoadRandomSkull(*this); // loads the next skull
+        }
+
         // Aim and clamp aim angle to 10 degrees from horizon
         if (IsKeyDown(KEY_LEFT))
         {
@@ -240,34 +260,17 @@ public:
             if (aimAngle > MAX_ANGLE)
                 aimAngle = MAX_ANGLE;
         }
-
-        // Keep target up to date so Shoot() always has the correct value
-        target = GetAimTarget();
-
-        // Move the flying skull
-        if (flyingSkull != nullptr)
-        {
-            float dt = GetFrameTime();
-            flyingSkull->position.x += flyingVelocity.x * dt;
-            flyingSkull->position.y += flyingVelocity.y * dt;
-
-            // Despawn when off screen
-            if (flyingSkull->position.y < 0 ||
-                flyingSkull->position.x < 0 ||
-                flyingSkull->position.x > SCREEN_W)
-            {
-                delete flyingSkull;
-                flyingSkull = nullptr;
-            }
-        }
     }
 
-    void Draw()
+    void Draw(Texture2D skullTexture)
     {
-        // DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
+        activeSkull.Draw(skullTexture);
+
+        target = GetAimTarget();
+        DrawCircle(position.x, position.y, 20, DARKBLUE); // base of the slingshot (replace with texture later)
         DrawLine(position.x - 1, position.y, target.x, target.y, DARKBLUE);
 
-        DrawText(("Loaded: " + activeSkull->ToString()).c_str(), 10, 150, 20, BLACK);
+        DrawText(("Loaded: " + activeSkull.ToString()).c_str(), 10, 150, 20, BLACK);
     }
 
     // --- Game Logic ---
@@ -281,38 +284,39 @@ public:
         return t;
     }
 
+    // TODO: Why won't you work
     void Shoot(SkullsManager &skullsManager)
     {
-        if (flyingSkull != nullptr) return; // already a skull in flight
+        if (activeSkull.isFlying)
+            return;
 
-        // Compute direction from slingshot toward aim target
-        Vector2 dir = Vector2Subtract(target, position);
-        float len = Vector2Length(dir);
-        if (len > 0)
-            dir = Vector2Scale(dir, 1.0f / len);
+        activeSkull.isFlying = true;
 
-        // Launch the active skull
-        flyingSkull = activeSkull;
-        flyingSkull->position = position;
-        flyingVelocity = Vector2Scale(dir, SKULL_SPEED);
-        activeSkull = nullptr;
+        // DrawText("pew pew", position.x, position.y - 100, 20, BLACK);
 
-        // Load the next skull into the slingshot
-        skullsManager.LoadRandomSkull(*this);
+        // allow the skull to store motion
+        float speed = 400;
+        activeSkull.velocity.x = cos(aimAngle) * speed;
+        activeSkull.velocity.y = sin(aimAngle) * speed;
+
+        // Shoot the skull (Send it flying based on the slingshot's aim angle)
+        activeSkull.position = position;
+        // activeSkull->position.y += sin(aimAngle) * SCREEN_W / 2;
+
+        // removed instant reload or the shot appears immediately lol
+        // skullsManager.LoadRandomSkull(*this);
     }
 };
-
 // fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
-    Skull* skull = new Skull();
+    Skull skull;
+    skull.color = static_cast<SkullColor>(skulls[rand() % skulls.size()].color);
 
-    // Pick random color from the enum of colors, minus the wall and magenta
-    SkullColor validColors[] = {SKULL_RED, SKULL_GREEN, SKULL_BLUE, SKULL_YELLOW, SKULL_PURPLE, SKULL_ORANGE, SKULL_WHITE, SKULL_BLACK};
-
-    skull->color = validColors[rand() % 8];
-    skull->position = slingshot.position;
-    slingshot.activeSkull = skull;
+    slingshot.activeSkull.color = skull.color;
+    slingshot.activeSkull.position = slingshot.position; // ensures the loaded skull appears in the slingshot
+    slingshot.activeSkull.velocity = {0, 0};             // so next skull doesnt keep old velocity
+    slingshot.activeSkull.isFlying = false;
 }
 
 /**
@@ -352,10 +356,12 @@ int main()
     SetTargetFPS(60);
 
     int level = 1;
+
     Slingshot slingshot;
 
     SkullsManager skullsManager;
     Ceiling ceiling; // Default mode
+    slingshot.skullsManager = &skullsManager;
 
     skullsManager.Spawn(level);
     skullsManager.LoadRandomSkull(slingshot);
@@ -388,24 +394,12 @@ int main()
 
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, BLACK);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, BLACK);
-        slingshot.Draw();
+        slingshot.Draw(skullTexture);
 
         if (skullTexture.id != 0)
-        {
             skullsManager.Draw(skullTexture);
-            if (slingshot.activeSkull != nullptr)
-                slingshot.activeSkull->Draw(skullTexture);
-            if (slingshot.flyingSkull != nullptr)
-                slingshot.flyingSkull->Draw(skullTexture);
-        }
         else
-        {
             skullsManager.Draw(skullRenderTexture);
-            if (slingshot.activeSkull != nullptr)
-                slingshot.activeSkull->Draw(skullRenderTexture);
-            if (slingshot.flyingSkull != nullptr)
-                slingshot.flyingSkull->Draw(skullRenderTexture);
-        }
 
         // DrawText("Press [SPACE] to shoot!", 190, 200, 20, LIGHTGRAY);
 

@@ -3,6 +3,9 @@
 
 #include "objects/skull.h"
 
+using namespace std;
+
+
 void Skull::Draw(RenderTexture2D skullTexture)
 {
     DrawTexture(skullTexture.texture, position.x, position.y, SkullColorToRaylib(color));
@@ -22,7 +25,7 @@ void Skull::Draw(Texture2D skullTexture)
     DrawTexturePro(skullTexture, sourceRectangle, skullRectangle, origin, 0, SkullColorToRaylib(color));
 }
 
-std::string Skull::ToString()
+string Skull::ToString()
 {
-    return "Skull " + std::to_string(color);
+    return "Skull " + to_string(color);
 }
