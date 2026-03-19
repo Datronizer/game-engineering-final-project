@@ -14,38 +14,7 @@ const int SCREEN_H = 800;
 
 const int MAX_SKULLS_PER_ROW = 10;
 
-/**
- * A wall is a special skull that is not affected by the slingshot
- * It is indestructible
- *
- * This is like League using minions for literally everything (nice spaghetti code buddy)
- */
-class Wall : public Skull
-{
-};
 
-/**
- * This is a static skull that will not move
- */
-class StaticSkull : public Skull
-{
-};
-
-/**
- * This is a skull that is shot by the player
- */
-class ActiveSkull : public Skull
-{
-public:
-    Vector2 velocity = {0, 0};
-    bool isFlying = false;
-    /**
-     * Pops neighboring skulls of the same color and chain the pop to the next skull
-     */
-    void Pop()
-    {
-    }
-};
 
 class Slingshot; // forward declaration for LoadRandomSkull
 
