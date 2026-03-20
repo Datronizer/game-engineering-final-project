@@ -35,6 +35,8 @@ public:
     SkullColor GetRandomSkullColor();
     void LoadRandomSkull(Slingshot &slingshot); // defined after Slingshot
     void SpawnRow();
+    void GoDown();
+    void CheckLoseCondition(Slingshot &slingshot);
 
     // Draw
     void Draw(Texture2D skullTexture);

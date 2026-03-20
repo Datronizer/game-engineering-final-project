@@ -63,6 +63,7 @@ class Skull
 public:
     SkullColor color;
     Vector2 position;
+    Rectangle hitbox = {0, 0, SKULL_DIAMETER, SKULL_DIAMETER};
 
     void Draw(RenderTexture2D skullTexture);
     void Draw(Texture2D skullTexture);

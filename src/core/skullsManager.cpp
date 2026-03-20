@@ -2,6 +2,7 @@
 #include "core/consts.h"
 #include "core/skullsManager.h"
 #include "objects/slingshot.h"
+#include "skullsManager.h"
 
 // get the connected group, finding all skulls of the same color that are touching each other in a chain
 vector<int> SkullsManager::GetConnectedGroup(int startIndex)
@@ -41,7 +42,7 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
                 continue;
 
             // Check if this skull is close enough to be a neighbour
-            // KULL_DIAMETER + 6 covers both direct (32px) and staggered diagonal (~35.8px) neighbours
+            // SKULL_DIAMETER + 6 covers both direct (32px) and staggered diagonal (~35.8px) neighbours
             float dist = Vector2Distance(skulls[i].position, skulls[j].position);
 
             if (dist < SKULL_DIAMETER + 6)
@@ -268,7 +269,6 @@ SkullColor SkullsManager::GetRandomSkullColor()
     return validColors[rand() % 8];
 }
 
-// fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
     if (skulls.empty())
@@ -283,6 +283,35 @@ void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
     slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
 }
 
+void SkullsManager::GoDown()
+{
+    // Compress the ceiling
+    for (Skull &skull : skulls)
+    {
+        skull.position.y += SKULL_DIAMETER;
+    }
+}
+
+void SkullsManager::CheckLoseCondition(Slingshot &slingshot)
+{
+    // Draw an imaginary horizontal line at the slingshot, anything below it is a hitbox
+    // If anything touches or enters the hitbox, the game is over
+    Rectangle hitBox = {0, slingshot.position.y - (2 * SKULL_RADIUS), SCREEN_W, 200};
+
+    for (Skull &skull : skulls)
+    {
+        if (skull.position.y > hitBox.y)
+        {
+            printf("Game Over\n");
+            DrawText("Game Over", 10, 10, 20, RED);
+        }
+    }
+
+    // Visually show the hitbox
+    DrawLine(0, slingshot.position.y - SKULL_RADIUS - 4, SCREEN_W, slingshot.position.y - SKULL_RADIUS - 3, RED);
+}
+
+#pragma region Draw
 void SkullsManager::Draw(Texture2D skullTexture)
 {
     for (Skull skull : skulls)
@@ -297,6 +326,7 @@ void SkullsManager::Draw(RenderTexture2D skullTexture)
         skull.Draw(skullTexture);
     }
 }
+#pragma endregion
 
 // void SpawnRow()
 // {
