@@ -6,11 +6,11 @@
 #include <cfloat>
 #include <algorithm>
 
+#include "core/consts.h"
 #include "objects/skull.h"
 #include <slingshot.h>
 
 using namespace std;
-
 
 /**
  * Compresses the play area, one row at a time
@@ -85,17 +85,20 @@ int main()
 
         ClearBackground(RAYWHITE);
 
-        DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, BLACK);
-        DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, BLACK);
-        DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, BLACK);
         slingshot.Draw(skullTexture);
+
+        // Draw play area
+        DrawRectangle(0, 0, WALL_WIDTH, SCREEN_H, BLACK);                                // From left (0) to half play area width, centered horizontally
+        DrawRectangle(SCREEN_W / 2 + PLAY_AREA_WIDTH / 2, 0, SCREEN_W, SCREEN_H, BLACK); // From right (SCREEN_W - PLAY_AREA_WIDTH) to right
 
         if (skullTexture.id != 0)
             skullsManager.Draw(skullTexture);
         else
             skullsManager.Draw(skullRenderTexture);
 
-        // DrawText("Press [SPACE] to shoot!", 190, 200, 20, LIGHTGRAY);
+        DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, PURPLE);
+        DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, PURPLE);
+        DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, PURPLE);
 
         EndDrawing();
     }

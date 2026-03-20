@@ -3,11 +3,7 @@
 
 #include <raylib.h>
 #include <string>
-
-// Shared game constants
-const int TILE_SIZE = 32;
-const int SKULL_RADIUS = 16;
-const int SKULL_DIAMETER = SKULL_RADIUS * 2;
+#include "core/consts.h"
 
 #pragma region SkullColor
 // This is in case we're gonna use a texture for the skulls
