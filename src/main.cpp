@@ -12,21 +12,6 @@
 using namespace std;
 
 
-// fuck you forward declarations
-void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
-{
-    if (skulls.empty())
-        return; // safety check
-
-    slingshot.activeSkull.color = slingshot.nextSkullColor;
-    slingshot.activeSkull.position = slingshot.position;
-    slingshot.activeSkull.velocity = {0, 0};
-    slingshot.activeSkull.isFlying = false;
-
-    // Pick next preview from any skull in the grid
-    slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
-}
-
 /**
  * Compresses the play area, one row at a time
  *

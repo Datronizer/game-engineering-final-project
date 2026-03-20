@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/sienna/Documents/school/prog33921/game-engineering-final-project/builds",
+            "binaryPath": "/home/sienna/Documents/school/prog33921/game-engineering-final-project/builds/game",
+            "binaryArgs": []
+        }
+    ]
+}

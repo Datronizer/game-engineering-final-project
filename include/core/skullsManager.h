@@ -10,6 +10,7 @@
 
 using namespace std;
 
+class Slingshot;  // Again, fuck you forward declarations
 
 class SkullsManager
 {
@@ -22,8 +23,6 @@ public:
 
     // score count!!
     int score = 0;
-
-    SkullsManager();
 
     // Main logic
     vector<int> GetConnectedGroup(int startIndex);

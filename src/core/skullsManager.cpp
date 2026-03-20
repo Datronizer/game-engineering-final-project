@@ -1,15 +1,7 @@
 #include <algorithm>
 #include "core/consts.h"
 #include "core/skullsManager.h"
-
-// // I'm gonna assume the width of the rows is like 10 skulls max
-// vector<Skull> skulls;
-
-// // storing collided skulls index
-// int collidedIndex = -1;
-
-// // score count!!
-// int score = 0;
+#include "objects/slingshot.h"
 
 // get the connected group, finding all skulls of the same color that are touching each other in a chain
 vector<int> SkullsManager::GetConnectedGroup(int startIndex)
@@ -267,94 +259,6 @@ void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
     CheckPop(skulls.size() - 1);
 }
 
-// for collision with the skulls
-bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
-{
-
-    if (activeSkull.position.y <= SKULL_RADIUS * 3)
-    {
-        collidedIndex = -2; // special value meaning "hit ceiling"
-        return true;
-    }
-
-    for (int i = 0; i < (int)skulls.size(); i++)
-    {
-        float dist = Vector2Distance(activeSkull.position, skulls[i].position);
-        if (dist < SKULL_DIAMETER + 2)
-        {
-            collidedIndex = i; // store index
-            return true;
-        }
-    }
-    collidedIndex = -1;
-    return false;
-}
-
-// Where to place the skull when it hits another one
-void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
-{
-    if (collidedIndex < 0)
-        return;
-
-    // Hit ceiling, snap to nearest x grid position at top row
-    if (collidedIndex == -2)
-    {
-        Skull newSkull;
-        newSkull.color = activeSkull.color;
-        newSkull.position.x = round(activeSkull.position.x / SKULL_DIAMETER) * SKULL_DIAMETER;
-        newSkull.position.y = SKULL_RADIUS * 3;
-        skulls.push_back(newSkull);
-        CheckPop(skulls.size() - 1);
-        return;
-    }
-
-    // which direction did it come from
-    float dx = activeSkull.position.x - skulls[collidedIndex].position.x;
-    float dy = activeSkull.position.y - skulls[collidedIndex].position.y;
-
-    // define all possible snap slots
-    Vector2 offsets[] = {
-        {0, -(float)SKULL_DIAMETER},
-        {0, (float)SKULL_DIAMETER},
-        {-(float)SKULL_DIAMETER, 0},
-        {(float)SKULL_DIAMETER, 0},
-        {-(float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
-        {(float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
-        {-(float)SKULL_RADIUS, (float)SKULL_DIAMETER},
-        {(float)SKULL_RADIUS, (float)SKULL_DIAMETER},
-    };
-
-    // pick the best slot using dot product
-    Vector2 bestOffset = offsets[0];
-    float bestDot = -FLT_MAX;
-
-    for (Vector2 offset : offsets)
-    {
-        float dot = dx * offset.x + dy * offset.y;
-        if (dot > bestDot)
-        {
-            bestDot = dot;
-            bestOffset = offset;
-        }
-    }
-
-    Skull newSkull;
-    newSkull.color = activeSkull.color;
-    newSkull.position.x = skulls[collidedIndex].position.x + bestOffset.x;
-    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y;
-
-    for (Skull &skull : skulls)
-    {
-        // check the slot isn't already occupied
-        if (Vector2Distance(skull.position, newSkull.position) < SKULL_DIAMETER - 2)
-            return;
-    }
-
-    // place the skull and check for a pop (3 in a row lol)
-    skulls.push_back(newSkull);
-    CheckPop(skulls.size() - 1);
-}
-
 SkullColor SkullsManager::GetRandomSkullColor()
 {
     // Pick random color from the enum of colors, minus the wall and magenta
@@ -362,6 +266,21 @@ SkullColor SkullsManager::GetRandomSkullColor()
 
     // TODO: Number of colors to choose should scale based on levels
     return validColors[rand() % 8];
+}
+
+// fuck you forward declarations
+void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
+{
+    if (skulls.empty())
+        return; // safety check
+
+    slingshot.activeSkull.color = slingshot.nextSkullColor;
+    slingshot.activeSkull.position = slingshot.position;
+    slingshot.activeSkull.velocity = {0, 0};
+    slingshot.activeSkull.isFlying = false;
+
+    // Pick next preview from any skull in the grid
+    slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
 }
 
 void SkullsManager::Draw(Texture2D skullTexture)

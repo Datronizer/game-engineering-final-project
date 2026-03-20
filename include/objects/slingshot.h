@@ -1,3 +1,6 @@
+#ifndef SLINGSHOT_H
+#define SLINGSHOT_H
+
 #include <raylib.h>
 #include <skullsManager.h>
 #include "core/consts.h"
@@ -33,3 +36,5 @@ public:
     Vector2 GetAimTarget();
     void Shoot(SkullsManager &skullsManager);
 };
+
+#endif // SLINGSHOT_H
