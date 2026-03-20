@@ -30,7 +30,7 @@ public:
     void Spawn(int level)
     {
         // Read the level file
-        FILE *file = fopen("levels/level-01", "r");
+        FILE *file = fopen("src/levels/level-01", "r");
         if (file == NULL)
         {
             printf("Error opening file\n");
@@ -334,9 +334,8 @@ int main()
 
     skullsManager.Spawn(level);
     skullsManager.LoadRandomSkull(slingshot);
-
-    // Actual texture
-    Texture2D skullTexture = LoadTexture("assets/skull_jelly_32x32.png");
+    
+    Texture2D skullTexture = LoadTexture("src/assets/skull_jelly_32x32.png");
 
     // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
     RenderTexture2D skullRenderTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
