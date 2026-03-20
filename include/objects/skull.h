@@ -57,7 +57,6 @@ inline SkullColor ColorCharToSkullColor(char c)
 }
 #pragma endregion
 
-
 class Skull
 {
 public:
@@ -82,13 +81,6 @@ class Wall : public Skull
 };
 
 /**
- * This is a static skull that will not move
- */
-class StaticSkull : public Skull
-{
-};
-
-/**
  * This is a skull that is shot by the player
  */
 class ActiveSkull : public Skull
@@ -96,12 +88,6 @@ class ActiveSkull : public Skull
 public:
     Vector2 velocity = {0, 0};
     bool isFlying = false;
-    
-    /**
-     * Pops neighboring skulls of the same color and chain the pop to the next skull
-     */
-    void Pop();
 };
-
 
 #endif // SKULL_H
