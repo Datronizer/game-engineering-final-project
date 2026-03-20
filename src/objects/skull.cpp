@@ -5,12 +5,17 @@
 
 using namespace std;
 
-
+/**
+ * Fallback drawing if there is no texture
+ */
 void Skull::Draw(RenderTexture2D skullTexture)
 {
     DrawTexture(skullTexture.texture, position.x, position.y, SkullColorToRaylib(color));
 }
 
+/**
+ * Draws the skull using a texture
+ */
 void Skull::Draw(Texture2D skullTexture)
 {
     // Source rectangle (where the texture is taken from)

@@ -9,6 +9,7 @@ const int TILE_SIZE = 32;
 const int SKULL_RADIUS = 16;
 const int SKULL_DIAMETER = SKULL_RADIUS * 2;
 
+#pragma region SkullColor
 // This is in case we're gonna use a texture for the skulls
 // For now, we'll just cast this to Raylib colors
 enum SkullColor
@@ -58,6 +59,7 @@ inline SkullColor ColorCharToSkullColor(char c)
     default:  return SKULL_MAGENTA; // just so we know something went wrong
     }
 }
+#pragma endregion
 
 
 class Skull
