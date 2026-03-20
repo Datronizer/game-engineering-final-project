@@ -100,9 +100,9 @@ void SkullsManager::Spawn(int level)
 
         // Start drawing from the middle top, but shifted by half the number of
         // max skulls in a row (default: 5)
-        const int DEFAULT_X = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2));
+        const int DEFAULT_X = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
 
-        int x = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2));
+        int x = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
         int y = SKULL_RADIUS * 3;
         int row = 0;
 
