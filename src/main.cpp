@@ -49,7 +49,9 @@ int main()
 
     SetTargetFPS(60);
 
-    int level = 1;
+    // Debug should always start at level 0
+    // Normal gameplay starts at 1
+    int level = 0;
 
     Slingshot slingshot;
 

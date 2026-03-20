@@ -104,9 +104,6 @@ void SkullsManager::Spawn(int level)
         skull.position.x = SKULL_DIAMETER; // Unlike other skulls, this always start from top left
         skull.position.y = SKULL_DIAMETER;
 
-        //     skulls.push_back(skull);
-        // }
-
         // Start drawing from the middle top, but shifted by half the number of
         // max skulls in a row (default: 5)
         const int DEFAULT_X = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
@@ -134,7 +131,7 @@ void SkullsManager::Spawn(int level)
                     printf("Odd row\n");
                     x = DEFAULT_X + SKULL_RADIUS;
                 }
-                y += SKULL_DIAMETER - 4; // move down a row (diameter = 2x radius)
+                y += SKULL_DIAMETER; // move down a row (diameter = 2x radius)
                 continue;
             }
 
@@ -147,7 +144,8 @@ void SkullsManager::Spawn(int level)
             // If the character is air, shift the next skull by the diameter to simulate a gap
             if (c == '0')
             {
-                x += SKULL_RADIUS;
+                x += SKULL_DIAMETER;
+                continue;
             }
 
             // TODO: Fix
@@ -183,8 +181,7 @@ void SkullsManager::Spawn(int level)
 // for collision with the skulls
 bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
 {
-
-    if (activeSkull.position.y <= SKULL_RADIUS * 3)
+    if (activeSkull.position.y <= SKULL_RADIUS * stage)
     {
         collidedIndex = -2; // special value meaning "hit ceiling"
         return true;
@@ -206,29 +203,30 @@ bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
 // Where to place the skull when it hits another one
 void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
 {
-    if (collidedIndex < 0)
-        return;
-
+    // Funny chase condition
     // Hit ceiling, snap to nearest x grid position at top row
     if (collidedIndex == -2)
     {
+        printf("Hit ceiling\n");
+
         Skull newSkull;
         newSkull.color = activeSkull.color;
         newSkull.position.x = round(activeSkull.position.x / SKULL_DIAMETER) * SKULL_DIAMETER;
-        newSkull.position.y = SKULL_RADIUS * 3;
+        newSkull.position.y = stage * SKULL_DIAMETER + SKULL_RADIUS;
         skulls.push_back(newSkull);
         CheckPop(skulls.size() - 1);
         return;
     }
 
+    if (collidedIndex < 0)
+        return;
+
     // which direction did it come from
     float dx = activeSkull.position.x - skulls[collidedIndex].position.x;
     float dy = activeSkull.position.y - skulls[collidedIndex].position.y;
 
-    // define all possible snap slots
+    // define all possible snap slots (hex grid: no direct above/below)
     Vector2 offsets[] = {
-        {0, -(float)SKULL_DIAMETER},
-        {0, (float)SKULL_DIAMETER},
         {-(float)SKULL_DIAMETER, 0},
         {(float)SKULL_DIAMETER, 0},
         {-(float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
