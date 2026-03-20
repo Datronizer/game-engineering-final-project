@@ -73,7 +73,15 @@ void SkullsManager::CheckPop(int newSkullIndex)
 void SkullsManager::Spawn(int level)
 {
     // Read the level file
-    FILE *file = fopen("src/levels/level-01", "r");
+    // If level is less than 10, add a leading 0 to the level number
+    string levelFileName;
+    if (level < 10)
+        levelFileName = "src/levels/level-0" + to_string(level);
+    else
+        levelFileName = "src/levels/level-" + to_string(level);
+
+    printf("Loading level %s\n", levelFileName.c_str());
+    FILE *file = fopen(levelFileName.c_str(), "r");
     if (file == NULL)
     {
         printf("Error opening file\n");
