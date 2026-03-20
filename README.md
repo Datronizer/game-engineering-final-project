@@ -7,3 +7,10 @@ If you are on UNIX and you want to quickly build and run the game, you can do th
 g++ src/main.cpp src/objects/skull.cpp -o builds/game -I include -I/usr/local/include -L/usr/local/lib -lraylib && ./builds/game
 ```
 
+UPDATE:
+I added a makefile. To build, simply do:
+```bash
+make
+```
+
+Your game should now be in the `builds` folder.
