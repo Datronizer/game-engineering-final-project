@@ -47,7 +47,15 @@ int main()
 {
     InitWindow(SCREEN_W, SCREEN_H, "Bust-a-Move (but cooler)");
 
+    // Audio device
+    InitAudioDevice();
+   
     SetTargetFPS(60);
+
+    // Loading music
+    Music music = LoadMusicStream("src/assets/lol.mp3");
+    PlayMusicStream(music);
+
 
     // Debug should always start at level 0
     // Normal gameplay starts at 1
@@ -75,6 +83,9 @@ int main()
 
     while (!WindowShouldClose())
     {
+        // Play music
+        UpdateMusicStream(music); 
+
         // Update
         slingshot.Update();
         skullsManager.CheckLoseCondition(slingshot);
@@ -125,6 +136,9 @@ int main()
         EndDrawing();
     }
 
+    // Cleanup music as well
+    UnloadMusicStream(music);
+    CloseAudioDevice();
     CloseWindow();
 
     return 0;
