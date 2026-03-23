@@ -72,6 +72,7 @@ int main()
     skullsManager.LoadRandomSkull(slingshot); // activeSkull gets the real first color
 
     Texture2D skullTexture = LoadTexture("src/assets/skull_jelly_32x32.png");
+    Texture2D bgTexture = LoadTexture("src/assets/bg2.png");  // 639 x 360
 
     // Insane performance hack from Raylib docs (wtf do you mean a texture works better than a circle)
     RenderTexture2D skullRenderTexture = LoadRenderTexture(SKULL_RADIUS * 2, SKULL_RADIUS * 2);
@@ -80,6 +81,7 @@ int main()
     DrawCircle(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, WHITE);
     DrawCircleLines(SKULL_RADIUS, SKULL_RADIUS, SKULL_RADIUS, BLACK);
     EndTextureMode();
+
 
     while (!WindowShouldClose())
     {
@@ -113,6 +115,15 @@ int main()
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+
+        // Center the background
+        DrawTexturePro(
+            bgTexture, 
+            Rectangle{0, 0, (float)bgTexture.width, (float)bgTexture.height}, 
+            Rectangle{0, 0, SCREEN_W, SCREEN_H + SKULL_DIAMETER}, 
+            Vector2{0, 0}, 
+            0, 
+            WHITE);
 
         slingshot.Draw(skullTexture);
 
