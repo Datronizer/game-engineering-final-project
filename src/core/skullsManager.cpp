@@ -52,19 +52,113 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
     return group;
 }
 
-// See if there is 4 connected and then erase them!
+
+// Walks the skull graph upward to check if a skull is anchored to the ceiling.
+// Uses depth-first search, if any path leads to the top row, the skull is supported.
+// 'visited' is passed in so we don't revisit skulls across multiple calls in CheckPop.
+bool SkullsManager::IsConnectedToCeiling(int index, vector<bool> &visited)
+{
+    // Already checked this skull in a previous path, skip it
+    if (visited[index]) return false;
+    visited[index] = true;
+
+    // If this skull is in the top row (close enough to the ceiling), it's anchored
+    if (skulls[index].position.y <= stage * SKULL_DIAMETER + SKULL_RADIUS + 4)
+        return true;
+
+    // Recursively check all neighbours, if any of them are ceiling-connected, so is this one
+    for (int j = 0; j < (int)skulls.size(); j++)
+    {
+        if (visited[j]) continue;
+        float dist = Vector2Distance(skulls[index].position, skulls[j].position);
+        if (dist < SKULL_DIAMETER + 6)
+            if (IsConnectedToCeiling(j, visited))
+                return true;
+    }
+    return false;
+}
+
+
+// Called after every skull lands. Checks for a match of 3+, clears them
+// then drops any skulls that are no longer connected to the ceiling
 void SkullsManager::CheckPop(int newSkullIndex)
 {
+    // finds all neighbouring skulls of the same colour connected to the one i placed
     vector<int> group = GetConnectedGroup(newSkullIndex);
 
-    if (group.size() >= 3)
+    // Need at least 3 of the same colour touching to trigger a clear
+    if ((int)group.size() >= 3)
     {
-        // Sort descending so erasing by index doesn't shift earlier indices
+        // 10 points for each skull directly cleared by the match
+        score += (int)group.size() * 10;
+
+        // Erase in descending index order so earlier indices don't shift mid-loop
         sort(group.rbegin(), group.rend());
         for (int i : group)
             skulls.erase(skulls.begin() + i);
 
-        score += group.size(); // 1 point per skull popped
+        // After the pop, some skulls may be hanging in mid-air with nothing holding them up
+        // Dropped skulls score 20 for the first, then double for each after: 20, 40, 80, 160
+        // This rewards setting up big chain drops over just matching 3
+        DropFloating();
+    }
+}
+
+
+void SkullsManager::DropFloating()
+{
+     // Exit early if there are no skulls to process
+    if (skulls.empty()) return;
+
+     // One boolean per skull.,. will this skull survive (is it connected to the ceiling)?
+    vector<bool> connected(skulls.size(), false);
+    // Explicit stack for an iterative depth-first flood fill (avoids recursion overhead)
+    vector<int> stack;
+
+    // Check every skull to see if it's touching the ceiling.
+    // 'stage' tracks which row the ceiling is on; we convert that to an actual
+    // Y position on screen, then add 4 pixels of wiggle room so skulls that
+    // are just barely below the line still count as attached.
+    for (int i = 0; i < (int)skulls.size(); i++)
+    {
+        //Find skulls touching the ceiling
+        if (skulls[i].position.y <= stage * SKULL_DIAMETER + SKULL_RADIUS + 4)
+        {
+            stack.push_back(i); // This skull touches the ceiling, seed the fill from it
+            connected[i] = true; // Mark it as connected so it won't be added again
+        }
+    }
+
+    // if one skull is safe, check its neighbours, for each skull, check all others and if close enough, they're connected too
+    while (!stack.empty())
+    {
+        int i = stack.back();
+        stack.pop_back();
+
+        for (int j = 0; j < (int)skulls.size(); j++)
+        {
+            if (connected[j]) continue;
+            float dist = Vector2Distance(skulls[i].position, skulls[j].position);
+            if (dist < SKULL_DIAMETER + 6)
+            {
+                connected[j] = true;
+                stack.push_back(j);
+            }
+        }
+    }
+
+    // score and erase
+    int dropPoints = 20; // Base score awarded for the first floating skull dropped
+
+    for (int i = (int)skulls.size() - 1; i >= 0; i--)
+    {
+        //If a skull is NOT connected to ceiling, it falls
+        if (!connected[i])
+        {
+            score += dropPoints;
+            dropPoints *= 2;
+            skulls.erase(skulls.begin() + i);
+        }
     }
 }
 
@@ -181,7 +275,7 @@ void SkullsManager::Spawn(int level)
 // for collision with the skulls
 bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
 {
-    if (activeSkull.position.y <= SKULL_RADIUS * stage)
+    if (activeSkull.position.y <= stage * SKULL_DIAMETER + SKULL_RADIUS)
     {
         collidedIndex = -2; // special value meaning "hit ceiling"
         return true;
@@ -300,21 +394,28 @@ void SkullsManager::GoDown()
 
 void SkullsManager::CheckLoseCondition(Slingshot &slingshot)
 {
-    // Draw an imaginary horizontal line at the slingshot, anything below it is a hitbox
-    // If anything touches or enters the hitbox, the game is over
-    Rectangle hitBox = {0, slingshot.position.y - (2 * SKULL_RADIUS), SCREEN_W, 200};
+    // Visually show the danger line
+    DrawLine(0, slingshot.position.y - SKULL_RADIUS - 4, SCREEN_W, slingshot.position.y - SKULL_RADIUS - 3, RED);
 
     for (Skull &skull : skulls)
     {
-        if (skull.position.y > hitBox.y)
-        {
-            printf("Game Over\n");
-            DrawText("Game Over", 10, 10, 20, RED);
-        }
+        // If any skull crosses the danger line, set the game over flag 
+        if (skull.position.y > slingshot.position.y - SKULL_RADIUS - 4)
+            isGameOver = true;
     }
 
-    // Visually show the hitbox
-    DrawLine(0, slingshot.position.y - SKULL_RADIUS - 4, SCREEN_W, slingshot.position.y - SKULL_RADIUS - 3, RED);
+    if (isGameOver)
+    {
+        // Dark overlay to freeze the visual
+        DrawRectangle(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 150});
+        DrawText("GAME OVER", SCREEN_W / 2 - MeasureText("GAME OVER", 60) / 2, SCREEN_H / 2 - 30, 60, RED);
+    }
+}
+
+void SkullsManager::CheckWinCondition()
+{
+    if (skulls.empty())
+        isWin = true;
 }
 
 #pragma region Draw

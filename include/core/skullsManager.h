@@ -27,12 +27,23 @@ public:
     // Stage count (each stage pushes the ceiling down by SKULL_DIAMETER)
     int stage = 1;
 
+    // Speed bonus starts at 50,000 and drains to zero over 60 seconds
+    // Resets every time the player fires a shot, aka reward for playing fast 
+    float speedBonusTimer = 60.0f;
+    bool timerActive = false;
+
+    // Game over flag, set when a skull crosses the danger line
+    bool isGameOver = false;
+    bool isWin = false; //Or if you win 
+
     // Main logic
     vector<int> GetConnectedGroup(int startIndex);
+    bool IsConnectedToCeiling(int index, vector<bool> &visited);
     void CheckPop(int newSkullIndex);
     void Spawn(int level);
     bool CheckCollision(ActiveSkull &activeSkull);
     void SnapSkull(ActiveSkull &activeSkull);
+    void DropFloating();
 
     // Helpers
     SkullColor GetRandomSkullColor();
@@ -40,6 +51,7 @@ public:
     void SpawnRow();
     void GoDown();
     void CheckLoseCondition(Slingshot &slingshot);
+    void CheckWinCondition();
 
     // Draw
     void Draw(Texture2D skullTexture);

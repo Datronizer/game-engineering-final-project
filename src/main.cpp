@@ -53,9 +53,10 @@ int main()
     SetTargetFPS(60);
 
     // Loading music
-    Music music = LoadMusicStream("src/assets/lol.mp3");
-    PlayMusicStream(music);
+    Music music = LoadMusicStream("src/assets/SpookyMusic.mp3");
 
+    Sound warningSound = LoadSound("src/assets/Bells.mp3");
+    PlayMusicStream(music);
 
     // Debug should always start at level 0
     // Normal gameplay starts at 1
@@ -88,19 +89,32 @@ int main()
         // Play music
         UpdateMusicStream(music); 
 
+        // Tick the speed bonus timer down each frame while a shot is in progress
+        if (skullsManager.timerActive && skullsManager.speedBonusTimer > 0)
+            skullsManager.speedBonusTimer -= GetFrameTime();
+
         // Update
         slingshot.Update();
-        skullsManager.CheckLoseCondition(slingshot);
 
-        if (IsKeyPressed(KEY_SPACE))
+        if (!skullsManager.isGameOver && IsKeyPressed(KEY_SPACE))
         {
             // Every 6 shots, drop the ceiling by 1 row
             if (!slingshot.activeSkull.isFlying)
             {
-                if (ceiling.shots >= 5)
+                // Award speed bonus earned since the last shot, then reset the timer
+                if (skullsManager.timerActive && skullsManager.speedBonusTimer > 0){
+                    skullsManager.score += (int)(50000.0f * (skullsManager.speedBonusTimer / 60.0f));
+                }
+    
+            skullsManager.speedBonusTimer = 60.0f;
+            skullsManager.timerActive = true;
+                
+                //Every 3 shots (down from 5) drop the ceiling by 1 row
+                if (ceiling.shots >= 1)
                 {
                     ceiling.shots = 0;
                     ceiling.stage++;
+                    skullsManager.stage++; // keep skullsManager in sync with ceiling
                     skullsManager.GoDown();
                 }
                 else
@@ -138,12 +152,92 @@ int main()
         else
             skullsManager.Draw(skullRenderTexture);
 
+
+        // Play warning sound when any skull gets close to the danger line 
+        bool nearBottom = false;
+        for (Skull &skull : skullsManager.skulls)
+        {
+            if (skull.position.y > slingshot.position.y - SKULL_RADIUS * 8)
+            {
+                nearBottom = true;
+                break;
+            }
+        }
+
+        if (nearBottom && !skullsManager.isGameOver && !skullsManager.isWin)
+        {
+            if (!IsSoundPlaying(warningSound))
+                PlaySound(warningSound);
+        }
+        else
+        {
+            StopSound(warningSound);
+        }
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, PURPLE);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, PURPLE);
         DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, PURPLE);
         DrawText(("Shots: " + to_string(ceiling.shots)).c_str(), 10, 70, 20, PURPLE);
         DrawText(("Stage: " + to_string(ceiling.stage)).c_str(), 10, 90, 20, PURPLE);
 
+        // Show the current speed bonus the player would earn if they shot right now
+        DrawText(("Speed Bonus: " + to_string(skullsManager.timerActive
+            ? (int)(50000.0f * max(0.0f, skullsManager.speedBonusTimer / 60.0f))
+            : 0)).c_str(), 10, 110, 20, ORANGE);
+
+
+        // After all drawing, check win/lose
+        skullsManager.CheckLoseCondition(slingshot);
+        skullsManager.CheckWinCondition();
+
+        if (skullsManager.isWin)
+        {
+            // Dark overlay
+            DrawRectangle(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 150});
+            DrawText("YOU WIN!", SCREEN_W / 2 - MeasureText("YOU WIN!", 60) / 2, SCREEN_H / 2 - 60, 60, GREEN);
+
+            // Next level button
+            Rectangle nextBtn = {(float)SCREEN_W / 2 - 100, (float)SCREEN_H / 2 + 20, 200, 50};
+            DrawRectangleRec(nextBtn, DARKGREEN);
+            DrawText("NEXT LEVEL", (int)nextBtn.x + 10, (int)nextBtn.y + 12, 24, WHITE);
+
+        // Click to advance
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), nextBtn))
+        {
+
+            level++;
+
+            // Check if next level file exists before loading
+            string nextFile = level < 10 
+                ? "src/levels/level-0" + to_string(level)
+                : "src/levels/level-" + to_string(level);
+
+            FILE* test = fopen(nextFile.c_str(), "r");
+            if (test == NULL)
+            {
+                // No more levels, show a different message instead
+                // For now just loop back to level 0 lol
+                level = 0;
+            }
+            else
+            {
+                fclose(test);
+            }
+
+            //Resets all stats
+            skullsManager.skulls.clear();
+            skullsManager.score = 0;
+            skullsManager.stage = 1;
+            skullsManager.isWin = false;
+            skullsManager.isGameOver = false;
+            skullsManager.speedBonusTimer = 60.0f;
+            skullsManager.timerActive = false;
+            ceiling.stage = 1;
+            ceiling.shots = 0;
+            skullsManager.Spawn(level); //Spawns the level
+            skullsManager.LoadRandomSkull(slingshot);
+            skullsManager.LoadRandomSkull(slingshot);
+        }
+    }
         EndDrawing();
     }
 
