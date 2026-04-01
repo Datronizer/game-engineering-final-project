@@ -122,7 +122,7 @@ int main()
             skullsManager.timerActive = true;
                 
                 //Every 3 shots (down from 5) drop the ceiling by 1 row
-                if (ceiling.shots >= 1)
+                if (ceiling.shots >= 2)
                 {
                     ceiling.shots = 0;
                     ceiling.stage++;
@@ -146,7 +146,7 @@ int main()
 
         // Draw
         BeginDrawing();
-    ClearBackground(BLACK);
+        ClearBackground(BLACK);
 
     if (gameState == MENU)
     {
