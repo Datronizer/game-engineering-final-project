@@ -93,7 +93,7 @@ Vector2 Slingshot::GetAimTarget()
     return t;
 }
 
-// TODO: Why won't you work
+// To shoot
 void Slingshot::Shoot(SkullsManager &skullsManager)
 {
     if (activeSkull.isFlying)

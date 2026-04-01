@@ -44,11 +44,11 @@ public:
 };
 
 enum GameState { MENU, PLAYING, GAME_OVER };
-GameState gameState = MENU;
+GameState gameState = MENU; // Starts off in main menu
 
 int main()
 {
-    InitWindow(SCREEN_W, SCREEN_H, "Bust-a-Move (but cooler)");
+    InitWindow(SCREEN_W, SCREEN_H, "Break the Skull");
 
     // Audio device
     InitAudioDevice();
@@ -108,7 +108,7 @@ int main()
         // Update
         slingshot.Update();
 
-        if (!skullsManager.isGameOver && IsKeyPressed(KEY_SPACE))
+        if (!skullsManager.isGameOver && !skullsManager.isWin && IsKeyPressed(KEY_SPACE))
         {
             // Every 6 shots, drop the ceiling by 1 row
             if (!slingshot.activeSkull.isFlying)
@@ -249,10 +249,14 @@ int main()
 
         if (skullsManager.isWin)
         {
+
+            slingshot.Update();
+
             // Dark overlay
             DrawRectangle(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 150});
             DrawText("YOU WIN!", SCREEN_W / 2 - MeasureText("YOU WIN!", 60) / 2, SCREEN_H / 2 - 60, 60, GREEN);
 
+            
             // Next level button
             Rectangle nextBtn = {(float)SCREEN_W / 2 - 100, (float)SCREEN_H / 2 + 20, 200, 50};
             DrawRectangleRec(nextBtn, DARKGREEN);
