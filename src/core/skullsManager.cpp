@@ -35,6 +35,10 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
 
         for (int j = 0; j < (int)skulls.size(); j++)
         {
+                //if its a skull wall, skip it!
+               if (skulls[j].color != targetColor || skulls[j].color == SKULL_WALL)
+                continue;
+
             if (visited[j])
                 continue;
             // Skip skulls that don't match our target color
@@ -93,7 +97,9 @@ void SkullsManager::CheckPop(int newSkullIndex)
         score += (int)group.size() * 10;
 
         // Erase in descending index order so earlier indices don't shift mid-loop
+        //erase from the back of the vector first so it doesn't affect lower indices (go left through indices)
         sort(group.rbegin(), group.rend());
+
         for (int i : group)
             skulls.erase(skulls.begin() + i);
 
@@ -121,24 +127,28 @@ void SkullsManager::DropFloating()
     // are just barely below the line still count as attached.
     for (int i = 0; i < (int)skulls.size(); i++)
     {
-        //Find skulls touching the ceiling
+        //Find skulls touching the ceiling (if it's y position is close enough to the ceiling line, if it is marked connected, then it gets added to a to do list and gets marked connected)
         if (skulls[i].position.y <= stage * SKULL_DIAMETER + SKULL_RADIUS + 4)
         {
-            stack.push_back(i); // This skull touches the ceiling, seed the fill from it
+            stack.push_back(i); // This skull touches the ceiling
             connected[i] = true; // Mark it as connected so it won't be added again
         }
     }
 
+    // Spread out from those ceiling skulls
     // if one skull is safe, check its neighbours, for each skull, check all others and if close enough, they're connected too
     while (!stack.empty())
     {
-        int i = stack.back();
-        stack.pop_back();
+        int i = stack.back(); //grabs last item in stack
+        stack.pop_back(); //removes it from stack
 
         for (int j = 0; j < (int)skulls.size(); j++)
         {
-            if (connected[j]) continue;
-            float dist = Vector2Distance(skulls[i].position, skulls[j].position);
+            if (connected[j]) continue; //if it is on the ceiling, skip it
+
+            float dist = Vector2Distance(skulls[i].position, skulls[j].position); //2D positions and returns the straight-line distance between them in pixels.
+
+            //if it's close enough to be a neighbour, mark it as connected and add it to the to do list
             if (dist < SKULL_DIAMETER + 6)
             {
                 connected[j] = true;
@@ -147,17 +157,18 @@ void SkullsManager::DropFloating()
         }
     }
 
+    // Drop anything that wasn't reached, any skull that never got marked as connected has no path back to the ceiling, meaning it's floating in mid-air. 
     // score and erase
     int dropPoints = 20; // Base score awarded for the first floating skull dropped
 
-    for (int i = (int)skulls.size() - 1; i >= 0; i--)
+    for (int i = (int)skulls.size() - 1; i >= 0; i--) //avoids shifting index problem!
     {
-        //If a skull is NOT connected to ceiling, it falls
+        //If a skull is not connected to ceiling, it falls
         if (!connected[i])
         {
             score += dropPoints;
-            dropPoints *= 2;
-            skulls.erase(skulls.begin() + i);
+            dropPoints *= 2; //doubles score the more 
+            skulls.erase(skulls.begin() + i); //erases them from skulls
         }
     }
 }
@@ -329,13 +340,14 @@ void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
         {(float)SKULL_RADIUS, (float)SKULL_DIAMETER},
     };
 
-    // pick the best slot using dot product
+    // pick the best slot using dot product (It figures out which of the 6 hex slots the incoming skull should snap to based on the direction it came from)
     Vector2 bestOffset = offsets[0];
     float bestDot = -FLT_MAX;
 
     for (Vector2 offset : offsets)
     {
-        float dot = dx * offset.x + dy * offset.y;
+        //So it loops through all 6 slots, calculates the dot product for each, and picks the one with the highest score, meaning the slot that most closely matches where the skull came from
+        float dot = dx * offset.x + dy * offset.y; 
         if (dot > bestDot)
         {
             bestDot = dot;
@@ -343,10 +355,11 @@ void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
         }
     }
 
+    // creating the new static skull that replaces the active (flying) skull once it lands
     Skull newSkull;
-    newSkull.color = activeSkull.color;
+    newSkull.color = activeSkull.color; //same colour
     newSkull.position.x = skulls[collidedIndex].position.x + bestOffset.x;
-    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y;
+    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y; //places it at the collided skull's position plus the bestOffset, which is the winning hex slot calculated just before this code
 
     for (Skull &skull : skulls)
     {
@@ -402,13 +415,6 @@ void SkullsManager::CheckLoseCondition(Slingshot &slingshot)
         // If any skull crosses the danger line, set the game over flag 
         if (skull.position.y > slingshot.position.y - SKULL_RADIUS - 4)
             isGameOver = true;
-    }
-
-    if (isGameOver)
-    {
-        // Dark overlay to freeze the visual
-        DrawRectangle(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 150});
-        DrawText("GAME OVER", SCREEN_W / 2 - MeasureText("GAME OVER", 60) / 2, SCREEN_H / 2 - 30, 60, RED);
     }
 }
 

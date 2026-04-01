@@ -43,6 +43,9 @@ public:
     }
 };
 
+enum GameState { MENU, PLAYING, GAME_OVER };
+GameState gameState = MENU;
+
 int main()
 {
     InitWindow(SCREEN_W, SCREEN_H, "Bust-a-Move (but cooler)");
@@ -58,9 +61,18 @@ int main()
     Sound warningSound = LoadSound("src/assets/Bells.mp3");
     PlayMusicStream(music);
 
+    //Skull Minion Animation
+    Texture2D skullMinion = LoadTexture("src/assets/SkeletonEnemy.png");
+
+    int minionFrame = 0; // tracks which frame we're currently on
+    float minionTimer = 0.0f; // counts time between frame changes
+
     // Debug should always start at level 0
     // Normal gameplay starts at 1
     int level = 0;
+
+    // If you beat all 10 levels
+    bool gameComplete = false;
 
     Slingshot slingshot;
 
@@ -125,25 +137,65 @@ int main()
             slingshot.Shoot(skullsManager);
         }
 
+        //Minion enemy (animation timer)
+        minionTimer += GetFrameTime(); // adds how long the last frame took
+        if (minionTimer >= 0.25f) {  // every 0.25 seconds 
+            minionTimer = 0.0f; // reset the timer
+            minionFrame = (minionFrame + 1) % 3; // advance to next frame, loop back after 3
+        }
+
         // Draw
         BeginDrawing();
+    ClearBackground(BLACK);
 
-        ClearBackground(RAYWHITE);
+    if (gameState == MENU)
+    {
+        // Draw background!
+        DrawTexturePro(bgTexture, Rectangle{0, 0, (float)bgTexture.width, (float)bgTexture.height},
+            Rectangle{0, 0, SCREEN_W, SCREEN_H}, Vector2{0, 0}, 0, WHITE);
+
+        // Title
+        DrawText("BREAK THE SKULL", SCREEN_W / 2 - MeasureText("BREAK THE SKULL", 40) / 2, SCREEN_H / 2 - 80, 40, RED);
+
+        // Play button 
+        Rectangle playBtn = {(float)SCREEN_W / 2 - 80, (float)SCREEN_H / 2, 160, 50};
+        DrawRectangleRec(playBtn, DARKGRAY);
+        DrawText("PLAY", (int)playBtn.x + 50, (int)playBtn.y + 12, 28, WHITE);
+
+        //When the left mouse button is clicked and the mouse position is inside the play button rectangle, switch the game state to PLAYING
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), playBtn))
+            gameState = PLAYING; 
+
+    }  else if (gameState == PLAYING){
 
         // Center the background
         DrawTexturePro(
-            bgTexture, 
-            Rectangle{0, 0, (float)bgTexture.width, (float)bgTexture.height}, 
+            bgTexture, Rectangle{0, 0, (float)bgTexture.width, (float)bgTexture.height},
             Rectangle{0, 0, SCREEN_W, SCREEN_H + SKULL_DIAMETER}, 
-            Vector2{0, 0}, 
-            0, 
-            WHITE);
+            Vector2{0, 0}, 0, WHITE);
 
         slingshot.Draw(skullTexture);
 
         // Draw play area
         DrawRectangle(0, 0, WALL_WIDTH, SCREEN_H, BLACK);                                // From left (0) to half play area width, centered horizontally
         DrawRectangle(SCREEN_W / 2 + PLAY_AREA_WIDTH / 2, 0, SCREEN_W, SCREEN_H, BLACK); // From right (SCREEN_W - PLAY_AREA_WIDTH) to right
+
+
+        // Right minion 
+        DrawTexturePro(
+            skullMinion,
+            Rectangle{(float)(minionFrame * 64) + 64, 3 * 64, -64, 64},
+            Rectangle{(float)(SCREEN_W / 2 + PLAY_AREA_WIDTH / 2 - 20), (float)(SCREEN_H - 250), 160, 160},
+            Vector2{0, 0}, 0, WHITE
+        );
+
+        // Left minion (which is mirrored)
+        DrawTexturePro(
+            skullMinion,
+            Rectangle{(float)(minionFrame * 64), 3 * 64, 64, 64},
+            Rectangle{(float)(WALL_WIDTH - 140), (float)(SCREEN_H - 250), 160, 160},
+            Vector2{0, 0}, 0, WHITE
+        );
 
         ceiling.Draw();
 
@@ -164,6 +216,7 @@ int main()
             }
         }
 
+        //this plays the warning sound if skulls are near the bottom
         if (nearBottom && !skullsManager.isGameOver && !skullsManager.isWin)
         {
             if (!IsSoundPlaying(warningSound))
@@ -173,21 +226,26 @@ int main()
         {
             StopSound(warningSound);
         }
+
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, PURPLE);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, PURPLE);
         DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, PURPLE);
         DrawText(("Shots: " + to_string(ceiling.shots)).c_str(), 10, 70, 20, PURPLE);
-        DrawText(("Stage: " + to_string(ceiling.stage)).c_str(), 10, 90, 20, PURPLE);
+        DrawText(("Stage: " + to_string(level + 1)).c_str(), 10, 90, 20, PURPLE);
 
         // Show the current speed bonus the player would earn if they shot right now
         DrawText(("Speed Bonus: " + to_string(skullsManager.timerActive
-            ? (int)(50000.0f * max(0.0f, skullsManager.speedBonusTimer / 60.0f))
-            : 0)).c_str(), 10, 110, 20, ORANGE);
+        ? (int)(50000.0f * max(0.0f, skullsManager.speedBonusTimer / 60.0f))
+        : 0)).c_str(), SCREEN_W - 250, 10, 20, ORANGE);
 
 
         // After all drawing, check win/lose
         skullsManager.CheckLoseCondition(slingshot);
         skullsManager.CheckWinCondition();
+
+
+        if (skullsManager.isGameOver)
+            gameState = GAME_OVER;
 
         if (skullsManager.isWin)
         {
@@ -203,7 +261,6 @@ int main()
         // Click to advance
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), nextBtn))
         {
-
             level++;
 
             // Check if next level file exists before loading
@@ -212,19 +269,64 @@ int main()
                 : "src/levels/level-" + to_string(level);
 
             FILE* test = fopen(nextFile.c_str(), "r");
+
             if (test == NULL)
             {
-                // No more levels, show a different message instead
-                // For now just loop back to level 0 lol
-                level = 0;
+            // No more levels, show a different message instead
+            // No more levels so game complete yippee!
+            skullsManager.isWin = false;
+            skullsManager.isGameOver = false;
+            gameComplete = true;
+            gameState = GAME_OVER; //reuse game over state for now
             }
             else
             {
                 fclose(test);
-            }
 
-            //Resets all stats
-            skullsManager.skulls.clear();
+                //Resets all stats
+                skullsManager.skulls.clear();
+                skullsManager.score = 0;
+                skullsManager.stage = 1;
+                skullsManager.isWin = false;
+                skullsManager.isGameOver = false;
+                skullsManager.speedBonusTimer = 60.0f;
+                skullsManager.timerActive = false;
+                ceiling.stage = 1;
+                ceiling.shots = 0;
+                skullsManager.Spawn(level); //Spawns the level
+                skullsManager.LoadRandomSkull(slingshot);
+                skullsManager.LoadRandomSkull(slingshot);
+            }
+        }
+    }
+    //this draws the game over screen
+    }else if (gameState == GAME_OVER) {
+
+         //Draw background and dark overlay
+        DrawTexturePro(bgTexture, Rectangle{0, 0, (float)bgTexture.width, (float)bgTexture.height},
+            Rectangle{0, 0, SCREEN_W, SCREEN_H}, Vector2{0, 0}, 0, WHITE);
+        DrawRectangle(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 150}); //dark overlay
+
+        //Game over text
+          if (gameComplete)
+        {
+        DrawText("YOU WON THE GAME!", SCREEN_W / 2 - MeasureText("YOU WON THE GAME!", 40) / 2, SCREEN_H / 2 - 80, 40, GOLD);
+        }
+    else
+        {
+        DrawText("GAME OVER", SCREEN_W / 2 - MeasureText("GAME OVER", 60) / 2, SCREEN_H / 2 - 80, 60, RED);
+        }
+
+        //Main menu button
+        Rectangle menuBtn = {(float)SCREEN_W / 2 - 100, (float)SCREEN_H / 2 + 20, 200, 50};
+        DrawRectangleRec(menuBtn, DARKGRAY);
+        DrawText("MAIN MENU", (int)menuBtn.x + 18, (int)menuBtn.y + 12, 24, WHITE);
+
+        //If main menu button is clicked, reset everything and go back to menu
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), menuBtn))
+        {
+            gameComplete = false;
+            skullsManager.skulls.clear(); //clear all skulls
             skullsManager.score = 0;
             skullsManager.stage = 1;
             skullsManager.isWin = false;
@@ -233,9 +335,11 @@ int main()
             skullsManager.timerActive = false;
             ceiling.stage = 1;
             ceiling.shots = 0;
-            skullsManager.Spawn(level); //Spawns the level
-            skullsManager.LoadRandomSkull(slingshot);
-            skullsManager.LoadRandomSkull(slingshot);
+            level = 0;
+            skullsManager.Spawn(level);
+            skullsManager.LoadRandomSkull(slingshot); //seed next skull
+            skullsManager.LoadRandomSkull(slingshot); //load first active skull
+            gameState = MENU; //switch back to main menu
         }
     }
         EndDrawing();
