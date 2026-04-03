@@ -27,15 +27,24 @@ inline Color SkullColorToRaylib(SkullColor color)
 {
     switch (color)
     {
-    case SKULL_RED:    return RED;
-    case SKULL_GREEN:  return GREEN;
-    case SKULL_BLUE:   return BLUE;
-    case SKULL_YELLOW: return YELLOW;
-    case SKULL_PURPLE: return PURPLE;
-    case SKULL_ORANGE: return ORANGE;
-    case SKULL_WHITE:  return WHITE;
-    case SKULL_BLACK:  return BLACK;
-    default:           return MAGENTA;
+    case SKULL_RED:
+        return RED;
+    case SKULL_GREEN:
+        return GREEN;
+    case SKULL_BLUE:
+        return BLUE;
+    case SKULL_YELLOW:
+        return YELLOW;
+    case SKULL_PURPLE:
+        return PURPLE;
+    case SKULL_ORANGE:
+        return ORANGE;
+    case SKULL_WHITE:
+        return WHITE;
+    case SKULL_BLACK:
+        return BLACK;
+    default:
+        return MAGENTA;
     }
 }
 
@@ -44,15 +53,24 @@ inline SkullColor ColorCharToSkullColor(char c)
 {
     switch (c)
     {
-    case 'R': return SKULL_RED;
-    case 'G': return SKULL_GREEN;
-    case 'B': return SKULL_BLUE;
-    case 'Y': return SKULL_YELLOW;
-    case 'P': return SKULL_PURPLE;
-    case 'O': return SKULL_ORANGE;
-    case 'W': return SKULL_WHITE;
-    case 'K': return SKULL_BLACK;
-    default:  return SKULL_MAGENTA; // just so we know something went wrong
+    case 'R':
+        return SKULL_RED;
+    case 'G':
+        return SKULL_GREEN;
+    case 'B':
+        return SKULL_BLUE;
+    case 'Y':
+        return SKULL_YELLOW;
+    case 'P':
+        return SKULL_PURPLE;
+    case 'O':
+        return SKULL_ORANGE;
+    case 'W':
+        return SKULL_WHITE;
+    case 'K':
+        return SKULL_BLACK;
+    default:
+        return SKULL_MAGENTA; // just so we know something went wrong
     }
 }
 #pragma endregion
@@ -78,6 +96,8 @@ public:
  */
 class Wall : public Skull
 {
+public:
+    SkullColor color = SKULL_WALL;
 };
 
 /**
