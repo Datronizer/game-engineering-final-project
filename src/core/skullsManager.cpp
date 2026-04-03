@@ -2,6 +2,7 @@
 #include "core/consts.h"
 #include "core/skullsManager.h"
 #include "objects/slingshot.h"
+#include "skullsManager.h"
 
 // get the connected group, finding all skulls of the same color that are touching each other in a chain
 vector<int> SkullsManager::GetConnectedGroup(int startIndex)
@@ -41,7 +42,7 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
                 continue;
 
             // Check if this skull is close enough to be a neighbour
-            // KULL_DIAMETER + 6 covers both direct (32px) and staggered diagonal (~35.8px) neighbours
+            // SKULL_DIAMETER + 6 covers both direct (32px) and staggered diagonal (~35.8px) neighbours
             float dist = Vector2Distance(skulls[i].position, skulls[j].position);
 
             if (dist < SKULL_DIAMETER + 6)
@@ -72,7 +73,15 @@ void SkullsManager::CheckPop(int newSkullIndex)
 void SkullsManager::Spawn(int level)
 {
     // Read the level file
-    FILE *file = fopen("src/levels/level-01", "r");
+    // If level is less than 10, add a leading 0 to the level number
+    string levelFileName;
+    if (level < 10)
+        levelFileName = "src/levels/level-0" + to_string(level);
+    else
+        levelFileName = "src/levels/level-" + to_string(level);
+
+    printf("Loading level %s\n", levelFileName.c_str());
+    FILE *file = fopen(levelFileName.c_str(), "r");
     if (file == NULL)
     {
         printf("Error opening file\n");
@@ -94,9 +103,6 @@ void SkullsManager::Spawn(int level)
         skull.color = SKULL_WALL;
         skull.position.x = SKULL_DIAMETER; // Unlike other skulls, this always start from top left
         skull.position.y = SKULL_DIAMETER;
-
-        //     skulls.push_back(skull);
-        // }
 
         // Start drawing from the middle top, but shifted by half the number of
         // max skulls in a row (default: 5)
@@ -125,7 +131,7 @@ void SkullsManager::Spawn(int level)
                     printf("Odd row\n");
                     x = DEFAULT_X + SKULL_RADIUS;
                 }
-                y += SKULL_DIAMETER - 4; // move down a row (diameter = 2x radius)
+                y += SKULL_DIAMETER; // move down a row (diameter = 2x radius)
                 continue;
             }
 
@@ -138,7 +144,8 @@ void SkullsManager::Spawn(int level)
             // If the character is air, shift the next skull by the diameter to simulate a gap
             if (c == '0')
             {
-                x += SKULL_RADIUS;
+                x += SKULL_DIAMETER;
+                continue;
             }
 
             // TODO: Fix
@@ -174,8 +181,7 @@ void SkullsManager::Spawn(int level)
 // for collision with the skulls
 bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
 {
-
-    if (activeSkull.position.y <= SKULL_RADIUS * 3)
+    if (activeSkull.position.y <= SKULL_RADIUS * stage)
     {
         collidedIndex = -2; // special value meaning "hit ceiling"
         return true;
@@ -197,29 +203,30 @@ bool SkullsManager::CheckCollision(ActiveSkull &activeSkull)
 // Where to place the skull when it hits another one
 void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
 {
-    if (collidedIndex < 0)
-        return;
-
+    // Funny chase condition
     // Hit ceiling, snap to nearest x grid position at top row
     if (collidedIndex == -2)
     {
+        printf("Hit ceiling\n");
+
         Skull newSkull;
         newSkull.color = activeSkull.color;
         newSkull.position.x = round(activeSkull.position.x / SKULL_DIAMETER) * SKULL_DIAMETER;
-        newSkull.position.y = SKULL_RADIUS * 3;
+        newSkull.position.y = stage * SKULL_DIAMETER + SKULL_RADIUS;
         skulls.push_back(newSkull);
         CheckPop(skulls.size() - 1);
         return;
     }
 
+    if (collidedIndex < 0)
+        return;
+
     // which direction did it come from
     float dx = activeSkull.position.x - skulls[collidedIndex].position.x;
     float dy = activeSkull.position.y - skulls[collidedIndex].position.y;
 
-    // define all possible snap slots
+    // define all possible snap slots (hex grid: no direct above/below)
     Vector2 offsets[] = {
-        {0, -(float)SKULL_DIAMETER},
-        {0, (float)SKULL_DIAMETER},
         {-(float)SKULL_DIAMETER, 0},
         {(float)SKULL_DIAMETER, 0},
         {-(float)SKULL_RADIUS, -(float)SKULL_DIAMETER},
@@ -268,7 +275,6 @@ SkullColor SkullsManager::GetRandomSkullColor()
     return validColors[rand() % 8];
 }
 
-// fuck you forward declarations
 void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
 {
     if (skulls.empty())
@@ -283,6 +289,35 @@ void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
     slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
 }
 
+void SkullsManager::GoDown()
+{
+    // Compress the ceiling
+    for (Skull &skull : skulls)
+    {
+        skull.position.y += SKULL_DIAMETER;
+    }
+}
+
+void SkullsManager::CheckLoseCondition(Slingshot &slingshot)
+{
+    // Draw an imaginary horizontal line at the slingshot, anything below it is a hitbox
+    // If anything touches or enters the hitbox, the game is over
+    Rectangle hitBox = {0, slingshot.position.y - (2 * SKULL_RADIUS), SCREEN_W, 200};
+
+    for (Skull &skull : skulls)
+    {
+        if (skull.position.y > hitBox.y)
+        {
+            printf("Game Over\n");
+            DrawText("Game Over", 10, 10, 20, RED);
+        }
+    }
+
+    // Visually show the hitbox
+    DrawLine(0, slingshot.position.y - SKULL_RADIUS - 4, SCREEN_W, slingshot.position.y - SKULL_RADIUS - 3, RED);
+}
+
+#pragma region Draw
 void SkullsManager::Draw(Texture2D skullTexture)
 {
     for (Skull skull : skulls)
@@ -297,6 +332,7 @@ void SkullsManager::Draw(RenderTexture2D skullTexture)
         skull.Draw(skullTexture);
     }
 }
+#pragma endregion
 
 // void SpawnRow()
 // {

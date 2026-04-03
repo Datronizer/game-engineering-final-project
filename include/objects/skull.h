@@ -3,11 +3,7 @@
 
 #include <raylib.h>
 #include <string>
-
-// Shared game constants
-const int TILE_SIZE = 32;
-const int SKULL_RADIUS = 16;
-const int SKULL_DIAMETER = SKULL_RADIUS * 2;
+#include "core/consts.h"
 
 #pragma region SkullColor
 // This is in case we're gonna use a texture for the skulls
@@ -61,12 +57,12 @@ inline SkullColor ColorCharToSkullColor(char c)
 }
 #pragma endregion
 
-
 class Skull
 {
 public:
     SkullColor color;
     Vector2 position;
+    Rectangle hitbox = {0, 0, SKULL_DIAMETER, SKULL_DIAMETER};
 
     void Draw(RenderTexture2D skullTexture);
     void Draw(Texture2D skullTexture);
@@ -85,13 +81,6 @@ class Wall : public Skull
 };
 
 /**
- * This is a static skull that will not move
- */
-class StaticSkull : public Skull
-{
-};
-
-/**
  * This is a skull that is shot by the player
  */
 class ActiveSkull : public Skull
@@ -99,12 +88,6 @@ class ActiveSkull : public Skull
 public:
     Vector2 velocity = {0, 0};
     bool isFlying = false;
-    
-    /**
-     * Pops neighboring skulls of the same color and chain the pop to the next skull
-     */
-    void Pop();
 };
-
 
 #endif // SKULL_H

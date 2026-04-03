@@ -24,6 +24,9 @@ public:
     // score count!!
     int score = 0;
 
+    // Stage count (each stage pushes the ceiling down by SKULL_DIAMETER)
+    int stage = 1;
+
     // Main logic
     vector<int> GetConnectedGroup(int startIndex);
     void CheckPop(int newSkullIndex);
@@ -35,6 +38,8 @@ public:
     SkullColor GetRandomSkullColor();
     void LoadRandomSkull(Slingshot &slingshot); // defined after Slingshot
     void SpawnRow();
+    void GoDown();
+    void CheckLoseCondition(Slingshot &slingshot);
 
     // Draw
     void Draw(Texture2D skullTexture);
