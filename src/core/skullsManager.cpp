@@ -228,8 +228,8 @@ void SkullsManager::Spawn(int level)
         {
             Skull wall;
             wall.color = SKULL_WALL;
-            wall.position.x = x - SKULL_RADIUS;
-            wall.position.y = y - SKULL_RADIUS;
+            wall.position.x = x;
+            wall.position.y = y;
             skulls.push_back(wall);
             x += SKULL_DIAMETER;
             continue;
@@ -356,8 +356,14 @@ void SkullsManager::LoadRandomSkull(Slingshot *slingshot)
     slingshot->activeSkull.velocity = {0, 0};
     slingshot->activeSkull.isFlying = false;
 
-    // Pick next preview from any skull in the grid
-    slingshot->nextSkullColor = skulls[rand() % skulls.size()].color;
+    // Pick next preview from any non-wall skull still on the grid
+    vector<SkullColor> validColors;
+    for (Skull &skull : skulls)
+        if (skull.color != SKULL_WALL)
+            validColors.push_back(skull.color);
+
+    if (!validColors.empty())
+        slingshot->nextSkullColor = validColors[rand() % validColors.size()];
 }
 
 void SkullsManager::GoDown()

@@ -12,11 +12,11 @@ void Skull::Draw(RenderTexture2D *skullTexture)
 {
     if (color == SKULL_WALL)
     {
-        DrawRectangle(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
-        DrawRectangleLines(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
+        DrawRectangle(position.x - SKULL_RADIUS, position.y - SKULL_RADIUS, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
+        DrawRectangleLines(position.x - SKULL_RADIUS, position.y - SKULL_RADIUS, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
     }
     else
-        DrawTexture(skullTexture->texture, position.x, position.y, SkullColorToRaylib(color));
+        DrawTexture(skullTexture->texture, position.x - SKULL_RADIUS, position.y - SKULL_RADIUS, SkullColorToRaylib(color));
 }
 
 /**
@@ -35,8 +35,8 @@ void Skull::Draw(Texture2D *skullTexture)
 
     if (color == SKULL_WALL)
     {
-        DrawRectangle(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
-        DrawRectangleLines(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
+        DrawRectangle(position.x - SKULL_RADIUS, position.y - SKULL_RADIUS, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
+        DrawRectangleLines(position.x - SKULL_RADIUS, position.y - SKULL_RADIUS, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
     }
     else
         DrawTexturePro(*skullTexture, sourceRectangle, skullRectangle, origin, 0, SkullColorToRaylib(color));
