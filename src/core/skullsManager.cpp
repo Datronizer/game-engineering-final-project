@@ -226,9 +226,10 @@ void SkullsManager::Spawn(int level)
 
         case '1':
         {
-            Wall wall;
-            wall.position.x = SCREEN_W / 2;
-            wall.position.y = SCREEN_H - (x * SKULL_DIAMETER);
+            Skull wall;
+            wall.color = SKULL_WALL;
+            wall.position.x = x - SKULL_RADIUS;
+            wall.position.y = y - SKULL_RADIUS;
             skulls.push_back(wall);
             x += SKULL_DIAMETER;
             continue;
@@ -345,18 +346,18 @@ SkullColor SkullsManager::GetRandomSkullColor()
     return validColors[rand() % 8];
 }
 
-void SkullsManager::LoadRandomSkull(Slingshot &slingshot)
+void SkullsManager::LoadRandomSkull(Slingshot *slingshot)
 {
     if (skulls.empty())
         return; // safety check
 
-    slingshot.activeSkull.color = slingshot.nextSkullColor;
-    slingshot.activeSkull.position = slingshot.position;
-    slingshot.activeSkull.velocity = {0, 0};
-    slingshot.activeSkull.isFlying = false;
+    slingshot->activeSkull.color = slingshot->nextSkullColor;
+    slingshot->activeSkull.position = slingshot->position;
+    slingshot->activeSkull.velocity = {0, 0};
+    slingshot->activeSkull.isFlying = false;
 
     // Pick next preview from any skull in the grid
-    slingshot.nextSkullColor = skulls[rand() % skulls.size()].color;
+    slingshot->nextSkullColor = skulls[rand() % skulls.size()].color;
 }
 
 void SkullsManager::GoDown()
@@ -388,14 +389,14 @@ void SkullsManager::CheckWinCondition()
 }
 
 #pragma region Draw
-void SkullsManager::Draw(Texture2D skullTexture)
+void SkullsManager::Draw(Texture2D *skullTexture)
 {
     for (Skull skull : skulls)
     {
         skull.Draw(skullTexture);
     }
 }
-void SkullsManager::Draw(RenderTexture2D skullTexture)
+void SkullsManager::Draw(RenderTexture2D *skullTexture)
 {
     for (Skull skull : skulls)
     {

@@ -7,10 +7,9 @@
 #include "objects/skull.h"
 #include <raymath.h>
 
-
 using namespace std;
 
-class Slingshot;  // Again, fuck you forward declarations
+class Slingshot; // Again, fuck you forward declarations
 
 class SkullsManager
 {
@@ -28,13 +27,13 @@ public:
     int stage = 1;
 
     // Speed bonus starts at 50,000 and drains to zero over 60 seconds
-    // Resets every time the player fires a shot, aka reward for playing fast 
+    // Resets every time the player fires a shot, aka reward for playing fast
     float speedBonusTimer = 60.0f;
     bool timerActive = false;
 
     // Game over flag, set when a skull crosses the danger line
     bool isGameOver = false;
-    bool isWin = false; //Or if you win 
+    bool isWin = false; // Or if you win
 
     // Main logic
     vector<int> GetConnectedGroup(int startIndex);
@@ -47,15 +46,15 @@ public:
 
     // Helpers
     SkullColor GetRandomSkullColor();
-    void LoadRandomSkull(Slingshot &slingshot); // defined after Slingshot
+    void LoadRandomSkull(Slingshot *slingshot); // defined after Slingshot
     void SpawnRow();
     void GoDown();
     void CheckLoseCondition(Slingshot &slingshot);
     void CheckWinCondition();
 
     // Draw
-    void Draw(Texture2D skullTexture);
-    void Draw(RenderTexture2D skullTexture);
+    void Draw(Texture2D *skullTexture);
+    void Draw(RenderTexture2D *skullTexture);
 };
 
 #endif // SKULLSMANAGER_H

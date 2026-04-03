@@ -5,6 +5,11 @@
 
 using namespace std;
 
+Slingshot::Slingshot(SkullsManager *skullsManager)
+{
+    m_skullsManager = skullsManager;
+}
+
 void Slingshot::Update()
 {
     // move the skull every frame if it is flying
@@ -26,11 +31,11 @@ void Slingshot::Update()
         }
 
         // Stick to grid skulls on contact
-        if (skullsManager && skullsManager->CheckCollision(activeSkull))
+        if (m_skullsManager && m_skullsManager->CheckCollision(activeSkull))
         {
             activeSkull.isFlying = false;
-            skullsManager->SnapSkull(activeSkull);
-            skullsManager->LoadRandomSkull(*this);
+            m_skullsManager->SnapSkull(activeSkull);
+            m_skullsManager->LoadRandomSkull(this);
         }
 
         // Flew off screen
@@ -39,8 +44,8 @@ void Slingshot::Update()
             activeSkull.position.x > SCREEN_W)
         {
             activeSkull.isFlying = false;
-            if (skullsManager)
-                skullsManager->LoadRandomSkull(*this);
+            if (m_skullsManager)
+                m_skullsManager->LoadRandomSkull(this);
 
             // TODO: we should free the skull if it flies off screen
         }
@@ -61,7 +66,7 @@ void Slingshot::Update()
     }
 }
 
-void Slingshot::Draw(Texture2D &skullTexture)
+void Slingshot::Draw(Texture2D *skullTexture)
 {
     target = GetAimTarget();
 
@@ -94,7 +99,7 @@ Vector2 Slingshot::GetAimTarget()
 }
 
 // To shoot
-void Slingshot::Shoot(SkullsManager &skullsManager)
+void Slingshot::Shoot()
 {
     if (activeSkull.isFlying)
         return;

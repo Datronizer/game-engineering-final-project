@@ -11,10 +11,12 @@
 class Slingshot
 {
 public:
-// Basic consts
+    Slingshot(SkullsManager *skullsManager);
+
+    // Basic consts
     Vector2 position = {SCREEN_W / 2, SCREEN_H - 100};
     float aimAngle = -PI / 2; // Point upwards
-    
+
     // Logic consts
     const float CLAMP_ANGLE = 10;
     const float AIM_SPEED = 0.03f;
@@ -28,13 +30,13 @@ public:
     Vector2 target = {0, 0};
 
     // Other connected objects
-    SkullsManager *skullsManager;
+    SkullsManager *m_skullsManager;
     ActiveSkull activeSkull;
 
     void Update();
-    void Draw(Texture2D &skullTexture);
+    void Draw(Texture2D *skullTexture);
     Vector2 GetAimTarget();
-    void Shoot(SkullsManager &skullsManager);
+    void Shoot();
 };
 
 #endif // SLINGSHOT_H

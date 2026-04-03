@@ -8,15 +8,21 @@ using namespace std;
 /**
  * Fallback drawing if there is no texture
  */
-void Skull::Draw(RenderTexture2D skullTexture)
+void Skull::Draw(RenderTexture2D *skullTexture)
 {
-    DrawTexture(skullTexture.texture, position.x, position.y, SkullColorToRaylib(color));
+    if (color == SKULL_WALL)
+    {
+        DrawRectangle(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
+        DrawRectangleLines(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
+    }
+    else
+        DrawTexture(skullTexture->texture, position.x, position.y, SkullColorToRaylib(color));
 }
 
 /**
  * Draws the skull using a texture
  */
-void Skull::Draw(Texture2D skullTexture)
+void Skull::Draw(Texture2D *skullTexture)
 {
     // Source rectangle (where the texture is taken from)
     Rectangle sourceRectangle = {0, 0, TILE_SIZE, TILE_SIZE};
@@ -27,7 +33,13 @@ void Skull::Draw(Texture2D skullTexture)
     // Origin point for rotation/scaling
     Vector2 origin = {SKULL_RADIUS, SKULL_RADIUS};
 
-    DrawTexturePro(skullTexture, sourceRectangle, skullRectangle, origin, 0, SkullColorToRaylib(color));
+    if (color == SKULL_WALL)
+    {
+        DrawRectangle(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BROWN);
+        DrawRectangleLines(position.x, position.y, SKULL_DIAMETER, SKULL_DIAMETER, BLACK);
+    }
+    else
+        DrawTexturePro(*skullTexture, sourceRectangle, skullRectangle, origin, 0, SkullColorToRaylib(color));
 }
 
 string Skull::ToString()
