@@ -227,11 +227,14 @@ int main()
             StopSound(warningSound);
         }
 
+            if (DEBUG)
+            {
         DrawText(("angle: " + to_string(slingshot.aimAngle)).c_str(), 10, 10, 20, PURPLE);
         DrawText(("FPS: " + to_string(GetFPS())).c_str(), 10, 30, 20, PURPLE);
         DrawText(("Score: " + to_string(skullsManager.score)).c_str(), 10, 50, 20, PURPLE);
         DrawText(("Shots: " + to_string(ceiling.shots)).c_str(), 10, 70, 20, PURPLE);
         DrawText(("Stage: " + to_string(level + 1)).c_str(), 10, 90, 20, PURPLE);
+            }
 
         // Show the current speed bonus the player would earn if they shot right now
         DrawText(("Speed Bonus: " + to_string(skullsManager.timerActive

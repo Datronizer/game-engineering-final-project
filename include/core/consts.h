@@ -17,6 +17,8 @@ const int WALL_WIDTH = SCREEN_W / 2 - PLAY_AREA_WIDTH / 2;
 const int TILE_SIZE = 32;
 
 
+// Debug
+const bool DEBUG = true;
 
 
 #endif // CONSTS_H
