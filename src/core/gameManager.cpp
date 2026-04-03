@@ -82,6 +82,52 @@ void GameManager::DrawMinion(bool rightSide)
 
 void GameManager::Update()
 {
+    // Play music
+    UpdateMusicStream(*m_music);
+
+    // Tick the speed bonus timer down each frame while a shot is in progress
+    if (m_skullsManager->timerActive && m_skullsManager->speedBonusTimer > 0)
+        m_skullsManager->speedBonusTimer -= GetFrameTime();
+
+    // Update
+    m_slingshot->Update();
+
+    if (!m_skullsManager->isGameOver && !m_skullsManager->isWin && IsKeyPressed(KEY_SPACE))
+    {
+        if (!m_slingshot->activeSkull.isFlying)
+        {
+            // Award speed bonus earned since the last shot, then reset the timer
+            if (m_skullsManager->timerActive && m_skullsManager->speedBonusTimer > 0)
+            {
+                m_skullsManager->score += (int)(50000.0f * (m_skullsManager->speedBonusTimer / 60.0f));
+            }
+
+            m_skullsManager->speedBonusTimer = 60.0f;
+            m_skullsManager->timerActive = true;
+
+            // Every 3 shots (down from 5) drop the ceiling by 1 row
+            if (m_ceiling->shots >= 2)
+            {
+                m_ceiling->shots = 0;
+                m_ceiling->stage++;
+                m_skullsManager->stage++; // keep skullsManager in sync with ceiling
+                m_skullsManager->GoDown();
+            }
+            else
+            {
+                m_ceiling->shots++;
+            }
+        }
+        m_slingshot->Shoot();
+    }
+
+    // Minion enemy (animation timer)
+    m_minionTimer += GetFrameTime(); // adds how long the last frame took
+    if (m_minionTimer >= 0.25f)
+    {                                            // every 0.25 seconds
+        m_minionTimer = 0.0f;                    // reset the timer
+        m_minionFrame = (m_minionFrame + 1) % 3; // advance to next frame, loop back after 3
+    }
 }
 
 void GameManager::Draw()
