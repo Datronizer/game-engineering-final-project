@@ -2,7 +2,6 @@
 #include "core/consts.h"
 #include "core/skullsManager.h"
 #include "objects/slingshot.h"
-#include "skullsManager.h"
 
 // get the connected group, finding all skulls of the same color that are touching each other in a chain
 vector<int> SkullsManager::GetConnectedGroup(int startIndex)
@@ -35,12 +34,13 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
 
         for (int j = 0; j < (int)skulls.size(); j++)
         {
-                //if its a skull wall, skip it!
-               if (skulls[j].color != targetColor || skulls[j].color == SKULL_WALL)
+            // if its a skull wall, skip it!
+            if (skulls[j].color != targetColor || skulls[j].color == SKULL_WALL)
                 continue;
 
             if (visited[j])
                 continue;
+
             // Skip skulls that don't match our target color
             if (skulls[j].color != targetColor)
                 continue;
@@ -56,14 +56,14 @@ vector<int> SkullsManager::GetConnectedGroup(int startIndex)
     return group;
 }
 
-
 // Walks the skull graph upward to check if a skull is anchored to the ceiling.
 // Uses depth-first search, if any path leads to the top row, the skull is supported.
 // 'visited' is passed in so we don't revisit skulls across multiple calls in CheckPop.
 bool SkullsManager::IsConnectedToCeiling(int index, vector<bool> &visited)
 {
     // Already checked this skull in a previous path, skip it
-    if (visited[index]) return false;
+    if (visited[index])
+        return false;
     visited[index] = true;
 
     // If this skull is in the top row (close enough to the ceiling), it's anchored
@@ -73,7 +73,8 @@ bool SkullsManager::IsConnectedToCeiling(int index, vector<bool> &visited)
     // Recursively check all neighbours, if any of them are ceiling-connected, so is this one
     for (int j = 0; j < (int)skulls.size(); j++)
     {
-        if (visited[j]) continue;
+        if (visited[j])
+            continue;
         float dist = Vector2Distance(skulls[index].position, skulls[j].position);
         if (dist < SKULL_DIAMETER + 6)
             if (IsConnectedToCeiling(j, visited))
@@ -81,7 +82,6 @@ bool SkullsManager::IsConnectedToCeiling(int index, vector<bool> &visited)
     }
     return false;
 }
-
 
 // Called after every skull lands. Checks for a match of 3+, clears them
 // then drops any skulls that are no longer connected to the ceiling
@@ -97,7 +97,7 @@ void SkullsManager::CheckPop(int newSkullIndex)
         score += (int)group.size() * 10;
 
         // Erase in descending index order so earlier indices don't shift mid-loop
-        //erase from the back of the vector first so it doesn't affect lower indices (go left through indices)
+        // erase from the back of the vector first so it doesn't affect lower indices (go left through indices)
         sort(group.rbegin(), group.rend());
 
         for (int i : group)
@@ -110,13 +110,13 @@ void SkullsManager::CheckPop(int newSkullIndex)
     }
 }
 
-
 void SkullsManager::DropFloating()
 {
-     // Exit early if there are no skulls to process
-    if (skulls.empty()) return;
+    // Exit early if there are no skulls to process
+    if (skulls.empty())
+        return;
 
-     // One boolean per skull.,. will this skull survive (is it connected to the ceiling)?
+    // One boolean per skull.,. will this skull survive (is it connected to the ceiling)?
     vector<bool> connected(skulls.size(), false);
     // Explicit stack for an iterative depth-first flood fill (avoids recursion overhead)
     vector<int> stack;
@@ -127,10 +127,10 @@ void SkullsManager::DropFloating()
     // are just barely below the line still count as attached.
     for (int i = 0; i < (int)skulls.size(); i++)
     {
-        //Find skulls touching the ceiling (if it's y position is close enough to the ceiling line, if it is marked connected, then it gets added to a to do list and gets marked connected)
+        // Find skulls touching the ceiling (if it's y position is close enough to the ceiling line, if it is marked connected, then it gets added to a to do list and gets marked connected)
         if (skulls[i].position.y <= stage * SKULL_DIAMETER + SKULL_RADIUS + 4)
         {
-            stack.push_back(i); // This skull touches the ceiling
+            stack.push_back(i);  // This skull touches the ceiling
             connected[i] = true; // Mark it as connected so it won't be added again
         }
     }
@@ -139,16 +139,17 @@ void SkullsManager::DropFloating()
     // if one skull is safe, check its neighbours, for each skull, check all others and if close enough, they're connected too
     while (!stack.empty())
     {
-        int i = stack.back(); //grabs last item in stack
-        stack.pop_back(); //removes it from stack
+        int i = stack.back(); // grabs last item in stack
+        stack.pop_back();     // removes it from stack
 
         for (int j = 0; j < (int)skulls.size(); j++)
         {
-            if (connected[j]) continue; //if it is on the ceiling, skip it
+            if (connected[j])
+                continue; // if it is on the ceiling, skip it
 
-            float dist = Vector2Distance(skulls[i].position, skulls[j].position); //2D positions and returns the straight-line distance between them in pixels.
+            float dist = Vector2Distance(skulls[i].position, skulls[j].position); // 2D positions and returns the straight-line distance between them in pixels.
 
-            //if it's close enough to be a neighbour, mark it as connected and add it to the to do list
+            // if it's close enough to be a neighbour, mark it as connected and add it to the to do list
             if (dist < SKULL_DIAMETER + 6)
             {
                 connected[j] = true;
@@ -157,18 +158,18 @@ void SkullsManager::DropFloating()
         }
     }
 
-    // Drop anything that wasn't reached, any skull that never got marked as connected has no path back to the ceiling, meaning it's floating in mid-air. 
+    // Drop anything that wasn't reached, any skull that never got marked as connected has no path back to the ceiling, meaning it's floating in mid-air.
     // score and erase
     int dropPoints = 20; // Base score awarded for the first floating skull dropped
 
-    for (int i = (int)skulls.size() - 1; i >= 0; i--) //avoids shifting index problem!
+    for (int i = (int)skulls.size() - 1; i >= 0; i--) // avoids shifting index problem!
     {
-        //If a skull is not connected to ceiling, it falls
+        // If a skull is not connected to ceiling, it falls
         if (!connected[i])
         {
             score += dropPoints;
-            dropPoints *= 2; //doubles score the more 
-            skulls.erase(skulls.begin() + i); //erases them from skulls
+            dropPoints *= 2;                  // doubles score the more
+            skulls.erase(skulls.begin() + i); // erases them from skulls
         }
     }
 }
@@ -201,86 +202,48 @@ void SkullsManager::Spawn(int level)
      */
     char c;
 
-    // Top row is always the ceiling
-    for (int i = 0; i < SKULL_RADIUS; i++)
+    const int DEFAULT_X = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
+    int x = DEFAULT_X;
+    int y = SKULL_RADIUS * 3;
+    int row = 0;
+
+    while ((c = fgetc(file)) != EOF)
     {
-        Skull skull;
-        skull.color = SKULL_WALL;
-        skull.position.x = SKULL_DIAMETER; // Unlike other skulls, this always start from top left
-        skull.position.y = SKULL_DIAMETER;
-
-        // Start drawing from the middle top, but shifted by half the number of
-        // max skulls in a row (default: 5)
-        const int DEFAULT_X = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
-
-        int x = SCREEN_W / 2 - (SKULL_DIAMETER * (MAX_SKULLS_PER_ROW / 2)) + SKULL_RADIUS;
-        int y = SKULL_RADIUS * 3;
-        int row = 0;
-
-        while ((c = fgetc(file)) != EOF)
+        switch (c)
         {
+        case '\n':
+            row++;
+            x = row % 2 == 0 ? DEFAULT_X : DEFAULT_X + SKULL_RADIUS;
+            y += SKULL_DIAMETER;
+            continue;
 
-            // If the character is a newline, go next line
-            // If row is odd, stagger the next row by half the radius (odd rows have 2 less skulls)
-            if (c == '\n')
-            {
-                row++;
-                printf("Newline\n");
-                if (row % 2 == 0)
-                {
-                    printf("Even row\n");
-                    x = DEFAULT_X;
-                }
-                else
-                {
-                    printf("Odd row\n");
-                    x = DEFAULT_X + SKULL_RADIUS;
-                }
-                y += SKULL_DIAMETER; // move down a row (diameter = 2x radius)
-                continue;
-            }
+        case ' ':
+            continue;
 
-            // If the character is a space, ignore it and go next
-            if (c == ' ')
-            {
-                continue;
-            }
-
-            // If the character is air, shift the next skull by the diameter to simulate a gap
-            if (c == '0')
-            {
-                x += SKULL_DIAMETER;
-                continue;
-            }
-
-            // TODO: Fix
-            // // If the character is a wall, spawn a wall
-            // if (c == '1')
-            // {
-            //     // Spawn a new wall
-            //     Wall wall;
-            //     wall.position.x = SCREEN_W / 2;
-            //     wall.position.y = SCREEN_H - (x * SKULL_DIAMETER);
-
-            //     skulls.push_back(wall);
-            // }
-
-            // If the character is a skull, spawn a skull (which should be literally anything that wasn't
-            // already if-checked earlier)
-            //
-            // Spawn a new skull
-            // printf("Spawning color %c at %d, %d\n", c, x, y);
-
-            Skull skull;
-            skull.color = ColorCharToSkullColor(c);
-            skull.position.x = x;
-            skull.position.y = y;
-
-            skulls.push_back(skull);
-
+        case '0':
             x += SKULL_DIAMETER;
+            continue;
+
+        case '1':
+        {
+            Wall wall;
+            wall.position.x = SCREEN_W / 2;
+            wall.position.y = SCREEN_H - (x * SKULL_DIAMETER);
+            skulls.push_back(wall);
+            x += SKULL_DIAMETER;
+            continue;
         }
+        }
+
+        Skull skull;
+        skull.color = ColorCharToSkullColor(c);
+        skull.position.x = x;
+        skull.position.y = y;
+        skulls.push_back(skull);
+        x += SKULL_DIAMETER;
     }
+
+    fclose(file);
 }
 
 // for collision with the skulls
@@ -346,8 +309,8 @@ void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
 
     for (Vector2 offset : offsets)
     {
-        //So it loops through all 6 slots, calculates the dot product for each, and picks the one with the highest score, meaning the slot that most closely matches where the skull came from
-        float dot = dx * offset.x + dy * offset.y; 
+        // So it loops through all 6 slots, calculates the dot product for each, and picks the one with the highest score, meaning the slot that most closely matches where the skull came from
+        float dot = dx * offset.x + dy * offset.y;
         if (dot > bestDot)
         {
             bestDot = dot;
@@ -357,9 +320,9 @@ void SkullsManager::SnapSkull(ActiveSkull &activeSkull)
 
     // creating the new static skull that replaces the active (flying) skull once it lands
     Skull newSkull;
-    newSkull.color = activeSkull.color; //same colour
+    newSkull.color = activeSkull.color; // same colour
     newSkull.position.x = skulls[collidedIndex].position.x + bestOffset.x;
-    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y; //places it at the collided skull's position plus the bestOffset, which is the winning hex slot calculated just before this code
+    newSkull.position.y = skulls[collidedIndex].position.y + bestOffset.y; // places it at the collided skull's position plus the bestOffset, which is the winning hex slot calculated just before this code
 
     for (Skull &skull : skulls)
     {
@@ -412,7 +375,7 @@ void SkullsManager::CheckLoseCondition(Slingshot &slingshot)
 
     for (Skull &skull : skulls)
     {
-        // If any skull crosses the danger line, set the game over flag 
+        // If any skull crosses the danger line, set the game over flag
         if (skull.position.y > slingshot.position.y - SKULL_RADIUS - 4)
             isGameOver = true;
     }
