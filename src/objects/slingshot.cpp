@@ -61,7 +61,7 @@ void Slingshot::Update()
     }
 }
 
-void Slingshot::Draw(Texture2D skullTexture)
+void Slingshot::Draw(Texture2D &skullTexture)
 {
     target = GetAimTarget();
 

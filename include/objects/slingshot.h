@@ -2,7 +2,7 @@
 #define SLINGSHOT_H
 
 #include <raylib.h>
-#include <skullsManager.h>
+#include "core/skullsManager.h"
 #include "core/consts.h"
 
 /**
@@ -32,7 +32,7 @@ public:
     ActiveSkull activeSkull;
 
     void Update();
-    void Draw(Texture2D skullTexture);
+    void Draw(Texture2D &skullTexture);
     Vector2 GetAimTarget();
     void Shoot(SkullsManager &skullsManager);
 };
